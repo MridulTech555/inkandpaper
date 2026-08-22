@@ -6,3 +6,358 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum ArticleStatus {
+  DRAFT
+  IN_REVIEW
+  CHANGES_REQUESTED
+  APPROVED
+  SCHEDULED
+  PUBLISHED
+  ARCHIVED
+  REJECTED
+}
+
+enum ArticleBlockType {
+  PARAGRAPH
+  HEADING
+  IMAGE
+  GALLERY
+  VIDEO
+  QUOTE
+  CODE
+  TABLE
+  LIST
+  EMBED
+  CALLOUT
+  DIVIDER
+}
+
+enum CommentStatus {
+  VISIBLE
+  PENDING
+  REPORTED
+  HIDDEN
+  DELETED
+}
+
+enum ReviewStatus {
+  PENDING
+  APPROVED
+  CHANGES_REQUESTED
+  REJECTED
+}
+
+enum SubscriberStatus {
+  SUBSCRIBED
+  UNSUBSCRIBED
+}
+
+// ---------------------------------------------------------------------------
+// Identity & access control
+// ---------------------------------------------------------------------------
+
+model User {
+  id           String     @id @default(cuid())
+  name         String
+  email        String     @unique
+  passwordHash String
+  roleId       String
+  status       UserStatus @default(ACTIVE)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  role Role @relation(fields: [roleId], references: [id], onDelete: Restrict)
+
+  authorProfile    AuthorProfile?
+  articles         Article[]
+  comments         Comment[]
+  bookmarks        Bookmark[]
+  likes            Like[]
+  notifications    Notification[]
+  uploadedMedia    Media[]
+  articleReviews   ArticleReview[]
+  articleRevisions ArticleRevision[]
+  auditLogs        AuditLog[]
+
+  @@index([roleId])
+  @@index([status])
+}
+
+model Role {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  users       User[]
+  permissions RolePermission[]
+}
+
+model Permission {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+
+  roles RolePermission[]
+}
+
+model RolePermission {
+  id           String   @id @default(cuid())
+  roleId       String
+  permissionId String
+  createdAt    DateTime @default(now())
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId])
+  @@index([permissionId])
+}
+
+model AuthorProfile {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  slug        String   @unique
+  bio         String?
+  avatarUrl   String?
+  socialLinks Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ---------------------------------------------------------------------------
+// Content
+// ---------------------------------------------------------------------------
+
+model Article {
+  id            String        @id @default(cuid())
+  title         String
+  slug          String        @unique
+  excerpt       String?
+  featuredImage String?
+  status        ArticleStatus @default(DRAFT)
+  authorId      String
+  categoryId    String?
+  publishedAt   DateTime?
+  scheduledAt   DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  author   User      @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  category Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  blocks    ArticleBlock[]
+  tags      ArticleTag[]
+  comments  Comment[]
+  bookmarks Bookmark[]
+  likes     Like[]
+  revisions ArticleRevision[]
+  reviews   ArticleReview[]
+
+  @@index([status])
+  @@index([authorId])
+  @@index([categoryId])
+  @@index([publishedAt])
+}
+
+model ArticleBlock {
+  id        String           @id @default(cuid())
+  articleId String
+  type      ArticleBlockType
+  position  Int
+  content   Json
+  metadata  Json?
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  article Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  @@unique([articleId, position])
+  @@index([articleId])
+}
+
+model Category {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String?
+  image       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  articles Article[]
+}
+
+model Tag {
+  id   String @id @default(cuid())
+  name String @unique
+  slug String @unique
+
+  articles ArticleTag[]
+}
+
+model ArticleTag {
+  id        String   @id @default(cuid())
+  articleId String
+  tagId     String
+  createdAt DateTime @default(now())
+
+  article Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  tag     Tag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([articleId, tagId])
+  @@index([tagId])
+}
+
+model Media {
+  id         String   @id @default(cuid())
+  url        String
+  filename   String
+  mimeType   String
+  size       Int
+  width      Int?
+  height     Int?
+  altText    String?
+  caption    String?
+  uploadedBy String?
+  createdAt  DateTime @default(now())
+
+  uploader User? @relation(fields: [uploadedBy], references: [id], onDelete: SetNull)
+
+  @@index([uploadedBy])
+}
+
+// ---------------------------------------------------------------------------
+// Engagement
+// ---------------------------------------------------------------------------
+
+model Comment {
+  id        String        @id @default(cuid())
+  articleId String
+  userId    String
+  content   String
+  status    CommentStatus @default(VISIBLE)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  article Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([articleId])
+  @@index([userId])
+  @@index([status])
+}
+
+model Bookmark {
+  id        String   @id @default(cuid())
+  userId    String
+  articleId String
+  createdAt DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  article Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, articleId])
+  @@index([articleId])
+}
+
+model Like {
+  id        String   @id @default(cuid())
+  userId    String
+  articleId String
+  createdAt DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  article Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, articleId])
+  @@index([articleId])
+}
+
+model NewsletterSubscriber {
+  id             String           @id @default(cuid())
+  email          String           @unique
+  status         SubscriberStatus @default(SUBSCRIBED)
+  subscribedAt   DateTime         @default(now())
+  unsubscribedAt DateTime?
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String
+  title     String
+  message   String?
+  isRead    Boolean  @default(false)
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([isRead])
+}
+
+// ---------------------------------------------------------------------------
+// Editorial workflow & auditing
+// ---------------------------------------------------------------------------
+
+model ArticleRevision {
+  id         String   @id @default(cuid())
+  articleId  String
+  editedById String?
+  snapshot   Json
+  createdAt  DateTime @default(now())
+
+  article  Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  editedBy User?   @relation(fields: [editedById], references: [id], onDelete: SetNull)
+
+  @@index([articleId])
+}
+
+model ArticleReview {
+  id         String       @id @default(cuid())
+  articleId  String
+  reviewerId String?
+  status     ReviewStatus @default(PENDING)
+  comment    String?
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  article  Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  reviewer User?   @relation(fields: [reviewerId], references: [id], onDelete: SetNull)
+
+  @@index([articleId])
+  @@index([reviewerId])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  action    String
+  entity    String
+  entityId  String
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([entity, entityId])
+  @@index([createdAt])
+}

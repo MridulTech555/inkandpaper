@@ -64,10 +64,11 @@ public/           # Static assets
    cp .env.example .env
    ```
 
-3. Start a local PostgreSQL database and push the (currently empty) Prisma schema:
+3. Start a local PostgreSQL database, apply migrations, and seed demo data:
 
    ```bash
-   npm run db:push
+   npm run db:migrate
+   npm run db:seed
    ```
 
 4. Start the dev server:
@@ -82,11 +83,14 @@ public/           # Static assets
 
 Defined in `.env.example`. Copy to `.env` and never commit real secrets.
 
-| Variable              | Description                                           |
-| --------------------- | ----------------------------------------------------- |
-| `DATABASE_URL`        | PostgreSQL connection string used by Prisma.          |
-| `AUTH_SECRET`         | Secret used to sign/encrypt auth sessions and tokens. |
-| `NEXT_PUBLIC_APP_URL` | Public base URL of the app.                           |
+| Variable                    | Description                                           |
+| --------------------------- | ----------------------------------------------------- |
+| `DATABASE_URL`              | PostgreSQL connection string used by Prisma.          |
+| `AUTH_SECRET`               | Secret used to sign/encrypt auth sessions and tokens. |
+| `NEXT_PUBLIC_APP_URL`       | Public base URL of the app.                           |
+| `SEED_SUPER_ADMIN_PASSWORD` | Optional password for the seeded super admin account. |
+| `SEED_AUTHOR_PASSWORD`      | Optional password for the seeded author account.      |
+| `SEED_READER_PASSWORD`      | Optional password for the seeded reader account.      |
 
 ## Development Commands
 
@@ -100,6 +104,7 @@ Defined in `.env.example`. Copy to `.env` and never commit real secrets.
 | `npm run db:generate`  | Regenerate the Prisma client.           |
 | `npm run db:push`      | Push the Prisma schema to the database. |
 | `npm run db:migrate`   | Create/apply a Prisma migration.        |
+| `npm run db:seed`      | Seed the database with demo data.       |
 | `npm run db:studio`    | Open Prisma Studio.                     |
 
 ## Production Build
