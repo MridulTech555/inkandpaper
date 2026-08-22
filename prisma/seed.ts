@@ -1,47 +1,12 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import {
+  PERMISSIONS,
+  ROLE_NAMES,
+  ROLE_PERMISSIONS,
+} from "../lib/permissions/permissions";
 
 const prisma = new PrismaClient();
-
-const ROLE_NAMES = [
-  "SUPER_ADMIN",
-  "ADMIN",
-  "EDITOR",
-  "AUTHOR",
-  "READER",
-] as const;
-
-const PERMISSIONS = [
-  "article:create",
-  "article:edit",
-  "article:delete",
-  "article:publish",
-  "article:review",
-  "category:manage",
-  "comment:moderate",
-  "user:manage",
-  "settings:manage",
-] as const;
-
-const ROLE_PERMISSIONS: Record<(typeof ROLE_NAMES)[number], readonly string[]> =
-  {
-    SUPER_ADMIN: PERMISSIONS,
-    ADMIN: [
-      "article:review",
-      "category:manage",
-      "comment:moderate",
-      "user:manage",
-      "settings:manage",
-    ],
-    EDITOR: [
-      "article:edit",
-      "article:review",
-      "article:publish",
-      "comment:moderate",
-    ],
-    AUTHOR: ["article:create", "article:edit"],
-    READER: [],
-  };
 
 function seedPassword(envVar: string, fallback: string): string {
   const value = process.env[envVar];
@@ -76,8 +41,24 @@ async function main() {
     permissions.map((permission) => [permission.name, permission]),
   );
 
+  // Permission and RolePermission are kept in sync with lib/permissions/permissions.ts
+  // on every run: drop anything no longer in that source of truth, then ensure
+  // everything in it exists. Deleting a stale Permission cascades to its
+  // RolePermission rows, so role grants never drift from the matrix.
+  await prisma.permission.deleteMany({
+    where: { name: { notIn: [...PERMISSIONS] } },
+  });
+
   for (const roleName of ROLE_NAMES) {
     const role = roleByName.get(roleName)!;
+    const allowedPermissionIds = ROLE_PERMISSIONS[roleName].map(
+      (name) => permissionByName.get(name)!.id,
+    );
+
+    await prisma.rolePermission.deleteMany({
+      where: { roleId: role.id, permissionId: { notIn: allowedPermissionIds } },
+    });
+
     for (const permissionName of ROLE_PERMISSIONS[roleName]) {
       const permission = permissionByName.get(permissionName)!;
       await prisma.rolePermission.upsert({
@@ -90,51 +71,64 @@ async function main() {
     }
   }
 
-  const superAdminPasswordHash = await bcrypt.hash(
-    seedPassword("SEED_SUPER_ADMIN_PASSWORD", "ChangeMe123!SuperAdmin"),
-    12,
-  );
-  const authorPasswordHash = await bcrypt.hash(
-    seedPassword("SEED_AUTHOR_PASSWORD", "ChangeMe123!Author"),
-    12,
-  );
-  const readerPasswordHash = await bcrypt.hash(
-    seedPassword("SEED_READER_PASSWORD", "ChangeMe123!Reader"),
-    12,
-  );
-
-  await prisma.user.upsert({
-    where: { email: "super.admin@inknpaper.dev" },
-    update: {},
-    create: {
+  const demoUsers = [
+    {
+      envVar: "SEED_SUPER_ADMIN_PASSWORD",
+      fallback: "ChangeMe123!SuperAdmin",
       name: "Super Admin",
       email: "super.admin@inknpaper.dev",
-      passwordHash: superAdminPasswordHash,
-      roleId: roleByName.get("SUPER_ADMIN")!.id,
+      role: "SUPER_ADMIN" as const,
     },
-  });
-
-  const authorUser = await prisma.user.upsert({
-    where: { email: "author@inknpaper.dev" },
-    update: {},
-    create: {
+    {
+      envVar: "SEED_ADMIN_PASSWORD",
+      fallback: "ChangeMe123!Admin",
+      name: "Ann Admin",
+      email: "admin@inknpaper.dev",
+      role: "ADMIN" as const,
+    },
+    {
+      envVar: "SEED_EDITOR_PASSWORD",
+      fallback: "ChangeMe123!Editor",
+      name: "Eli Editor",
+      email: "editor@inknpaper.dev",
+      role: "EDITOR" as const,
+    },
+    {
+      envVar: "SEED_AUTHOR_PASSWORD",
+      fallback: "ChangeMe123!Author",
       name: "Ada Author",
       email: "author@inknpaper.dev",
-      passwordHash: authorPasswordHash,
-      roleId: roleByName.get("AUTHOR")!.id,
+      role: "AUTHOR" as const,
     },
-  });
-
-  await prisma.user.upsert({
-    where: { email: "reader@inknpaper.dev" },
-    update: {},
-    create: {
+    {
+      envVar: "SEED_READER_PASSWORD",
+      fallback: "ChangeMe123!Reader",
       name: "Riley Reader",
       email: "reader@inknpaper.dev",
-      passwordHash: readerPasswordHash,
-      roleId: roleByName.get("READER")!.id,
+      role: "READER" as const,
     },
-  });
+  ];
+
+  const usersByRole = new Map<string, { id: string }>();
+  for (const demoUser of demoUsers) {
+    const passwordHash = await bcrypt.hash(
+      seedPassword(demoUser.envVar, demoUser.fallback),
+      12,
+    );
+    const user = await prisma.user.upsert({
+      where: { email: demoUser.email },
+      update: {},
+      create: {
+        name: demoUser.name,
+        email: demoUser.email,
+        passwordHash,
+        roleId: roleByName.get(demoUser.role)!.id,
+      },
+    });
+    usersByRole.set(demoUser.role, user);
+  }
+
+  const authorUser = usersByRole.get("AUTHOR")!;
 
   await prisma.authorProfile.upsert({
     where: { userId: authorUser.id },

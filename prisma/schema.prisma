@@ -89,9 +89,23 @@ model User {
   articleReviews   ArticleReview[]
   articleRevisions ArticleRevision[]
   auditLogs        AuditLog[]
+  sessions         Session[]
 
   @@index([roleId])
   @@index([status])
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
 }
 
 model Role {

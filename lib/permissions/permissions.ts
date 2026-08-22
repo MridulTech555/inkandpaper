@@ -1,0 +1,70 @@
+export const PERMISSIONS = [
+  "article:create",
+  "article:read",
+  "article:update",
+  "article:delete",
+  "article:publish",
+  "article:review",
+
+  "category:create",
+  "category:update",
+  "category:delete",
+
+  "comment:moderate",
+
+  "user:create",
+  "user:update",
+  "user:delete",
+
+  "author:create",
+  "author:update",
+  "author:manage",
+
+  "analytics:view",
+
+  "settings:manage",
+] as const;
+
+export type PermissionName = (typeof PERMISSIONS)[number];
+
+export const ROLE_NAMES = [
+  "SUPER_ADMIN",
+  "ADMIN",
+  "EDITOR",
+  "AUTHOR",
+  "READER",
+] as const;
+
+export type RoleName = (typeof ROLE_NAMES)[number];
+
+export const ROLE_PERMISSIONS: Record<RoleName, readonly PermissionName[]> = {
+  SUPER_ADMIN: PERMISSIONS,
+  ADMIN: [
+    "article:read",
+    "article:update",
+    "article:delete",
+    "article:publish",
+    "article:review",
+    "category:create",
+    "category:update",
+    "category:delete",
+    "comment:moderate",
+    "user:create",
+    "user:update",
+    "user:delete",
+    "author:create",
+    "author:update",
+    "author:manage",
+    "analytics:view",
+  ],
+  EDITOR: [
+    "article:read",
+    "article:update",
+    "article:publish",
+    "article:review",
+    "category:update",
+    "comment:moderate",
+  ],
+  AUTHOR: ["article:create", "article:read", "article:update", "author:update"],
+  READER: ["article:read"],
+};
