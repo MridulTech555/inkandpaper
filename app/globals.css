@@ -1,26 +1,132 @@
 @import "tailwindcss";
 
+/*
+ * Semantic design tokens. Components should always read colors through
+ * these (bg-background, text-foreground, border-border, ...) rather than
+ * raw Tailwind palette classes, so the whole app stays theme-consistent.
+ *
+ * Light values live on bare :root. Dark values are redefined twice: once
+ * under prefers-color-scheme (the default, "system" behavior) and once
+ * under [data-theme="dark"] (so a future manual theme toggle can force a
+ * mode in either direction without any component changes).
+ */
+
 :root {
   --background: #ffffff;
-  --foreground: #171717;
+  --surface: #f7f7f8;
+  --surface-elevated: #ffffff;
+
+  --foreground: #18181b;
+  --foreground-secondary: #52525b;
+  --foreground-muted: #a1a1aa;
+
+  --border: #e4e4e7;
+
+  --primary: #4338ca;
+  --primary-foreground: #ffffff;
+
+  --success: #15803d;
+  --success-foreground: #ffffff;
+
+  --warning: #b45309;
+  --warning-foreground: #ffffff;
+
+  --error: #b91c1c;
+  --error-foreground: #ffffff;
+
+  --info: #1d4ed8;
+  --info-foreground: #ffffff;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --background: #0a0a0a;
+    --surface: #151517;
+    --surface-elevated: #1c1c1f;
+
+    --foreground: #f4f4f5;
+    --foreground-secondary: #a1a1aa;
+    --foreground-muted: #71717a;
+
+    --border: #27272a;
+
+    --primary: #818cf8;
+    --primary-foreground: #1e1b4b;
+
+    --success: #4ade80;
+    --success-foreground: #052e16;
+
+    --warning: #fbbf24;
+    --warning-foreground: #451a03;
+
+    --error: #f87171;
+    --error-foreground: #450a0a;
+
+    --info: #60a5fa;
+    --info-foreground: #172554;
+  }
+}
+
+:root[data-theme="dark"] {
+  --background: #0a0a0a;
+  --surface: #151517;
+  --surface-elevated: #1c1c1f;
+
+  --foreground: #f4f4f5;
+  --foreground-secondary: #a1a1aa;
+  --foreground-muted: #71717a;
+
+  --border: #27272a;
+
+  --primary: #818cf8;
+  --primary-foreground: #1e1b4b;
+
+  --success: #4ade80;
+  --success-foreground: #052e16;
+
+  --warning: #fbbf24;
+  --warning-foreground: #451a03;
+
+  --error: #f87171;
+  --error-foreground: #450a0a;
+
+  --info: #60a5fa;
+  --info-foreground: #172554;
 }
 
 @theme inline {
   --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-elevated: var(--surface-elevated);
+
   --color-foreground: var(--foreground);
+  --color-foreground-secondary: var(--foreground-secondary);
+  --color-foreground-muted: var(--foreground-muted);
+
+  --color-border: var(--border);
+
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+
+  --color-error: var(--error);
+  --color-error-foreground: var(--error-foreground);
+
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-serif: var(--font-article-serif);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
 }
