@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import { notFound } from "next/navigation";
+import { after } from "next/server";
 import {
   computeReadingTime,
   extractHeadings,
   getArticleBySlug,
   getRelatedArticles,
 } from "@/lib/services/articles";
+import { recordArticleView } from "@/lib/services/article-views";
 import { getCurrentUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/db/prisma";
 import { siteConfig } from "@/config/site";
@@ -22,8 +24,6 @@ import { AuthorBio } from "@/components/blog/author-bio";
 import { BookmarkButton } from "@/components/blog/bookmark-button";
 import { ShareButton } from "@/components/blog/share-button";
 import { NewsletterCta } from "@/components/blog/newsletter-cta";
-
-export const revalidate = 60;
 
 interface ArticlePageProps {
   params: Promise<{ slug: string }>;
@@ -87,6 +87,12 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
         }),
       )
     : false;
+
+  // Recorded after the response is sent so it never adds latency to the
+  // page. Authors viewing their own article don't inflate their own count.
+  if (currentUser?.id !== article.author.id) {
+    after(() => recordArticleView(article.id, currentUser?.id ?? null));
+  }
 
   const readingTime = computeReadingTime(article.blocks);
   const headings = extractHeadings(article.blocks);

@@ -37,6 +37,9 @@ yarn-error.log*
 # vercel
 .vercel
 
+# locally-uploaded media (see lib/services/media-actions.ts)
+/public/uploads
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

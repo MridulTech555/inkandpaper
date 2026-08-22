@@ -65,6 +65,12 @@ export const ROLE_PERMISSIONS: Record<RoleName, readonly PermissionName[]> = {
     "category:update",
     "comment:moderate",
   ],
-  AUTHOR: ["article:create", "article:read", "article:update", "author:update"],
+  AUTHOR: [
+    "article:create",
+    "article:read",
+    "article:update",
+    "article:delete",
+    "author:update",
+  ],
   READER: ["article:read"],
 };

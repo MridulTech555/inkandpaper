@@ -7,8 +7,6 @@ import { NewsletterCta } from "@/components/blog/newsletter-cta";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Newspaper } from "lucide-react";
 
-export const revalidate = 60;
-
 export const metadata: Metadata = {
   title: siteConfig.name,
   description: siteConfig.description,

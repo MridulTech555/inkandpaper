@@ -90,6 +90,7 @@ model User {
   articleRevisions ArticleRevision[]
   auditLogs        AuditLog[]
   sessions         Session[]
+  articleViews     ArticleView[]
 
   @@index([roleId])
   @@index([status])
@@ -182,11 +183,26 @@ model Article {
   likes     Like[]
   revisions ArticleRevision[]
   reviews   ArticleReview[]
+  views     ArticleView[]
 
   @@index([status])
   @@index([authorId])
   @@index([categoryId])
   @@index([publishedAt])
+}
+
+model ArticleView {
+  id        String   @id @default(cuid())
+  articleId String
+  userId    String?
+  createdAt DateTime @default(now())
+
+  article Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  user    User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([articleId])
+  @@index([articleId, createdAt])
+  @@index([userId])
 }
 
 model ArticleBlock {

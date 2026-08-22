@@ -10,8 +10,6 @@ import { ResultsPagination } from "@/components/blog/results-pagination";
 import { EmptyState } from "@/components/ui/empty-state";
 import { FolderOpen } from "lucide-react";
 
-export const revalidate = 60;
-
 const PAGE_SIZE = 10;
 
 interface CategoryPageProps {
