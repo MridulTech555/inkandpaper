@@ -130,14 +130,19 @@ async function main() {
 
   const authorUser = usersByRole.get("AUTHOR")!;
 
+  const authorProfileData = {
+    bio: "Writes about technology, culture, and everything in between. Formerly an engineer, now mostly found with a notebook and too many browser tabs open.",
+    avatarUrl: "https://picsum.photos/seed/ada-author-avatar/256/256",
+    socialLinks: {
+      twitter: "https://twitter.com/adaauthor",
+      website: "https://adaauthor.dev",
+    },
+  };
+
   await prisma.authorProfile.upsert({
     where: { userId: authorUser.id },
-    update: {},
-    create: {
-      userId: authorUser.id,
-      slug: "ada-author",
-      bio: "Writes about technology, culture, and everything in between.",
-    },
+    update: authorProfileData,
+    create: { userId: authorUser.id, slug: "ada-author", ...authorProfileData },
   });
 
   const categoryData = [
@@ -189,6 +194,43 @@ async function main() {
       excerpt: "A look at the architecture decisions behind Ink & Paper.",
       category: categories[0],
       tags: [tags[0], tags[1]],
+      publishedDaysAgo: 1,
+      blocks: [
+        {
+          type: "PARAGRAPH" as const,
+          content: {
+            text: "Every blogging platform starts with the same question: how much should the framework decide for you, and how much should stay open? Ink & Paper leans toward the App Router's defaults, and mostly, that has paid off.",
+          },
+        },
+        {
+          type: "PARAGRAPH" as const,
+          content: {
+            text: "The foundation is deliberately boring: TypeScript in strict mode, Prisma against Postgres, and a component library built once and reused across the public site, the author dashboard, and the admin console. Boring, in this context, is a compliment.",
+          },
+        },
+        {
+          type: "HEADING" as const,
+          content: { text: "Server Components as the default", level: 2 },
+        },
+        {
+          type: "PARAGRAPH" as const,
+          content: {
+            text: "Article pages, category pages, and search results are all rendered on the server, straight from the database, with no client-side fetching in the critical path. The only components that ship JavaScript are the ones that genuinely need interactivity: a bookmark toggle, a share button, a search filter.",
+          },
+        },
+        {
+          type: "QUOTE" as const,
+          content: {
+            text: "The best client component is the one you didn't have to write.",
+          },
+        },
+        {
+          type: "PARAGRAPH" as const,
+          content: {
+            text: "That constraint shapes almost every decision downstream, from how data is fetched to how forms are submitted. It is easy to add interactivity later; it is much harder to claw it back once a page has already committed to being a client bundle.",
+          },
+        },
+      ],
     },
     {
       title: "Why We Still Write Long-Form",
@@ -197,6 +239,37 @@ async function main() {
         "In a world of short attention spans, long-form writing endures.",
       category: categories[1],
       tags: [tags[2]],
+      publishedDaysAgo: 4,
+      blocks: [
+        {
+          type: "PARAGRAPH" as const,
+          content: {
+            text: "It would be easy to conclude that nobody reads anymore — that everything worth saying now fits in a headline, a caption, or a fifteen-second clip. And yet, somehow, the long essay refuses to die.",
+          },
+        },
+        {
+          type: "PARAGRAPH" as const,
+          content: {
+            text: "Long-form writing survives because some ideas simply do not compress. A complicated argument needs room to build; a nuanced position needs space to acknowledge its own exceptions. Cut those away and what is left is not the idea, just its slogan.",
+          },
+        },
+        {
+          type: "HEADING" as const,
+          content: { text: "Reading as a deliberate act", level: 2 },
+        },
+        {
+          type: "PARAGRAPH" as const,
+          content: {
+            text: "There is also something the reader gets from committing to a longer piece: the sense of having actually thought something through, rather than having merely been exposed to it. That difference is easy to underrate until you notice how rarely it happens.",
+          },
+        },
+        {
+          type: "PARAGRAPH" as const,
+          content: {
+            text: "None of this is an argument against brevity where brevity is honest. It is an argument against mistaking brevity for depth, when what it usually offers is just less to disagree with.",
+          },
+        },
+      ],
     },
     {
       title: "Notes from the Road",
@@ -204,36 +277,76 @@ async function main() {
       excerpt: "Reflections from a few weeks of travel.",
       category: categories[2],
       tags: [tags[1], tags[2]],
+      publishedDaysAgo: 9,
+      blocks: [
+        {
+          type: "PARAGRAPH" as const,
+          content: {
+            text: "Three weeks, four cities, and one suitcase that was, in retrospect, always going to be too small. Travel has a way of reorganizing your sense of what actually matters, usually somewhere around the second missed train.",
+          },
+        },
+        {
+          type: "PARAGRAPH" as const,
+          content: {
+            text: "The itinerary planned for a lot of movement and very little rest, which in hindsight was the wrong trade to make. The best mornings were the unplanned ones — the ones spent finding a bakery by smell rather than by search.",
+          },
+        },
+        {
+          type: "HEADING" as const,
+          content: {
+            text: "What actually made it into the notebook",
+            level: 2,
+          },
+        },
+        {
+          type: "PARAGRAPH" as const,
+          content: {
+            text: "Not the museums, mostly. What stuck were smaller things: a stranger's directions that turned into a forty-minute conversation, a menu with no English and no regrets, the particular quiet of a city before its shops open.",
+          },
+        },
+        {
+          type: "QUOTE" as const,
+          content: {
+            text: "You don't remember the itinerary. You remember the detour.",
+          },
+        },
+      ],
     },
   ];
 
   for (const article of articleData) {
+    const publishedAt = new Date(
+      Date.now() - article.publishedDaysAgo * 24 * 60 * 60 * 1000,
+    );
+
+    const articleScalarData = {
+      title: article.title,
+      excerpt: article.excerpt,
+      featuredImage: `https://picsum.photos/seed/${article.slug}/1600/900`,
+      status: "PUBLISHED" as const,
+      authorId: authorUser.id,
+      categoryId: article.category.id,
+      publishedAt,
+      createdAt: publishedAt,
+    };
+
     const created = await prisma.article.upsert({
       where: { slug: article.slug },
-      update: {},
-      create: {
-        title: article.title,
-        slug: article.slug,
-        excerpt: article.excerpt,
-        status: "PUBLISHED",
-        authorId: authorUser.id,
-        categoryId: article.category.id,
-        publishedAt: new Date(),
-        blocks: {
-          create: [
-            {
-              type: "HEADING",
-              position: 0,
-              content: { text: article.title, level: 1 },
-            },
-            {
-              type: "PARAGRAPH",
-              position: 1,
-              content: { text: article.excerpt },
-            },
-          ],
-        },
-      },
+      update: articleScalarData,
+      create: { slug: article.slug, ...articleScalarData },
+    });
+
+    // Blocks are a fully-owned child list: replace them wholesale on every
+    // run so edits to the copy above always show up, instead of only
+    // applying the first time the article is created.
+    await prisma.articleBlock.deleteMany({ where: { articleId: created.id } });
+    await prisma.articleBlock.createMany({
+      data: article.blocks.map((block, index) => ({
+        articleId: created.id,
+        type: block.type,
+        position: index,
+        content: block.content,
+      })),
     });
 
     for (const tag of article.tags) {
@@ -243,6 +356,20 @@ async function main() {
         create: { articleId: created.id, tagId: tag.id },
       });
     }
+
+    const reader = usersByRole.get("READER")!;
+    const commentContent = `Really enjoyed "${article.title}" — looking forward to more like this.`;
+    await prisma.comment.upsert({
+      where: { id: `seed-comment-${created.id}` },
+      update: { content: commentContent },
+      create: {
+        id: `seed-comment-${created.id}`,
+        articleId: created.id,
+        userId: reader.id,
+        content: commentContent,
+        status: "VISIBLE",
+      },
+    });
   }
 
   console.log("Seed complete.");

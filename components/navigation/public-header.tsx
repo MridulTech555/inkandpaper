@@ -3,17 +3,14 @@ import { Bookmark, Search } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth/session";
 import { hasRole } from "@/lib/permissions/check";
 import { Button } from "@/components/ui/button";
-import { Avatar } from "@/components/ui/avatar";
 import { SimpleTooltip } from "@/components/ui/tooltip";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogoutButton } from "@/components/auth/logout-button";
+import { AccountMenu } from "@/components/navigation/account-menu";
 import { MobileNavigation } from "@/components/navigation/mobile-navigation";
 import type { PublicNavUser } from "@/types/navigation";
 
@@ -77,49 +74,17 @@ export async function PublicHeader() {
 
           <div className="hidden md:block">
             {user ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button
-                    type="button"
-                    className="focus-visible:ring-primary ml-1 rounded-full focus-visible:ring-2 focus-visible:outline-none"
-                    aria-label="Account menu"
-                  >
-                    <Avatar fallback={user.name.charAt(0)} size="sm" />
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuLabel>
-                    {user.name}
-                    <span className="text-foreground-muted block text-xs font-normal">
-                      {user.role}
-                    </span>
-                  </DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  {hasRole(
-                    sessionUser,
-                    "SUPER_ADMIN",
-                    "ADMIN",
-                    "EDITOR",
-                    "AUTHOR",
-                  ) ? (
-                    <DropdownMenuItem asChild>
-                      <Link href="/author">Author dashboard</Link>
-                    </DropdownMenuItem>
-                  ) : null}
-                  {hasRole(sessionUser, "SUPER_ADMIN", "ADMIN") ? (
-                    <DropdownMenuItem asChild>
-                      <Link href="/admin">Admin dashboard</Link>
-                    </DropdownMenuItem>
-                  ) : null}
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    onSelect={(event) => event.preventDefault()}
-                    className="p-0"
-                  >
-                    <LogoutButton className="w-full px-2 py-1.5 text-left" />
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <AccountMenu
+                user={user}
+                canAuthor={hasRole(
+                  sessionUser,
+                  "SUPER_ADMIN",
+                  "ADMIN",
+                  "EDITOR",
+                  "AUTHOR",
+                )}
+                canAdmin={hasRole(sessionUser, "SUPER_ADMIN", "ADMIN")}
+              />
             ) : (
               <div className="flex items-center gap-2">
                 <Button asChild variant="ghost" size="sm">
