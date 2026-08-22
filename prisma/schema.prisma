@@ -170,6 +170,10 @@ model Article {
   categoryId    String?
   publishedAt   DateTime?
   scheduledAt   DateTime?
+  // { metaTitle?, metaDescription?, ogImage?, canonicalUrl? } — the Publish
+  // dialog's collapsed "Advanced" section. One nullable JSON column instead
+  // of four so the migration stays minimal.
+  seo           Json?
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 

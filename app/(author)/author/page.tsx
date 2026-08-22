@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { FileText, CheckCircle2, Eye, PenSquare } from "lucide-react";
+import { FileText, CheckCircle2, Eye } from "lucide-react";
 import { requireUser } from "@/lib/permissions/check";
 import {
   getArticlesNeedingAttention,
@@ -7,9 +7,9 @@ import {
   getRecentArticles,
 } from "@/lib/services/author-articles";
 import { H1 } from "@/components/ui/typography";
-import { Button } from "@/components/ui/button";
 import { StatCard } from "@/components/ui/stat-card";
 import { ArticleTable } from "@/components/author/article-table";
+import { WriteArticleButton } from "@/components/author/write-article-button";
 
 export default async function AuthorDashboardPage() {
   const user = await requireUser();
@@ -29,12 +29,7 @@ export default async function AuthorDashboardPage() {
             Here&apos;s what&apos;s happening with your writing.
           </p>
         </div>
-        <Button asChild>
-          <Link href="/author/articles/new">
-            <PenSquare className="h-4 w-4" />
-            Write article
-          </Link>
-        </Button>
+        <WriteArticleButton />
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">

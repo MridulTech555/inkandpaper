@@ -1,31 +1,24 @@
 "use server";
 
+import { randomUUID } from "node:crypto";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import type { Prisma } from "@prisma/client";
+import type { ArticleStatus, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
-import { hasPermission, requirePermission } from "@/lib/permissions/check";
-import { articleFormSchema } from "@/lib/validation/article";
-import { plainTextToBlocks } from "@/lib/services/articles";
+import { requirePermission } from "@/lib/permissions/check";
+import {
+  draftSaveSchema,
+  publishSettingsSchema,
+  type DraftSaveInput,
+  type PublishSettingsInput,
+} from "@/lib/validation/article";
 
-export interface ArticleFormState {
-  error?: string;
-  fieldErrors?: Record<string, string[]>;
-}
-
-function parseFormData(formData: FormData) {
-  return {
-    title: formData.get("title"),
-    slug: formData.get("slug"),
-    excerpt: formData.get("excerpt") || undefined,
-    featuredImage: formData.get("featuredImage") || undefined,
-    categoryId: formData.get("categoryId") || undefined,
-    tagIds: formData.getAll("tagIds"),
-    content: formData.get("content"),
-    status: formData.get("status"),
-    scheduledAt: formData.get("scheduledAt") || undefined,
-  };
-}
+/** Statuses in which block/title content may still be autosaved. */
+const CONTENT_EDITABLE_STATUSES: ArticleStatus[] = [
+  "DRAFT",
+  "CHANGES_REQUESTED",
+  "PUBLISHED",
+];
 
 async function assertSlugAvailable(slug: string, excludeArticleId?: string) {
   const existing = await prisma.article.findUnique({
@@ -35,64 +28,47 @@ async function assertSlugAvailable(slug: string, excludeArticleId?: string) {
   return !existing || existing.id === excludeArticleId;
 }
 
+function slugify(value: string): string {
+  return value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+}
+
+async function uniqueSlugFrom(base: string): Promise<string> {
+  let candidate = base || "untitled";
+  let suffix = 2;
+  while (!(await assertSlugAvailable(candidate))) {
+    candidate = `${base || "untitled"}-${suffix}`;
+    suffix += 1;
+  }
+  return candidate;
+}
+
+/**
+ * Looks up an article and verifies the CURRENT session user is its author.
+ * Every mutation below calls this instead of trusting the articleId a
+ * client sent — ownership is re-checked against the database on every call.
+ */
 async function requireOwnedArticle(articleId: string, authorId: string) {
-  const article = await prisma.article.findFirst({
+  return prisma.article.findFirst({
     where: { id: articleId, authorId },
     select: { id: true, slug: true, status: true },
   });
-  return article;
 }
 
-export async function createArticleAction(
-  _prevState: ArticleFormState,
-  formData: FormData,
-): Promise<ArticleFormState> {
+export async function createDraftArticleAction(): Promise<void> {
   const user = await requirePermission("article:create");
 
-  const parsed = articleFormSchema.safeParse(parseFormData(formData));
-  if (!parsed.success) {
-    return { fieldErrors: parsed.error.flatten().fieldErrors };
-  }
-  const data = parsed.data;
-
-  if (!(await assertSlugAvailable(data.slug))) {
-    return { fieldErrors: { slug: ["That slug is already in use."] } };
-  }
-
-  const status = data.status ?? "DRAFT";
-  if (
-    (status === "PUBLISHED" || status === "SCHEDULED") &&
-    !hasPermission(user, "article:publish")
-  ) {
-    return {
-      fieldErrors: {
-        status: ["You don't have permission to publish or schedule articles."],
-      },
-    };
-  }
-
-  const blocks = plainTextToBlocks(data.content);
-  const isPublished = status === "PUBLISHED";
+  const slug = await uniqueSlugFrom(`untitled-${randomUUID().slice(0, 8)}`);
 
   const article = await prisma.article.create({
     data: {
-      title: data.title,
-      slug: data.slug,
-      excerpt: data.excerpt || null,
-      featuredImage: data.featuredImage || null,
-      status,
+      title: "Untitled",
+      slug,
+      status: "DRAFT",
       authorId: user.id,
-      categoryId: data.categoryId || null,
-      publishedAt: isPublished ? new Date() : null,
-      scheduledAt: status === "SCHEDULED" ? new Date(data.scheduledAt!) : null,
-      blocks: {
-        create: blocks.map((block, index) => ({
-          type: block.type,
-          content: block.content as Prisma.InputJsonValue,
-          position: index,
-        })),
-      },
-      tags: { create: data.tagIds.map((tagId) => ({ tagId })) },
     },
     select: { id: true },
   });
@@ -101,11 +77,16 @@ export async function createArticleAction(
   redirect(`/author/articles/${article.id}/edit`);
 }
 
-export async function updateArticleAction(
+export interface SaveContentResult {
+  error?: string;
+  savedAt?: string;
+  slug?: string;
+}
+
+export async function saveArticleContentAction(
   articleId: string,
-  _prevState: ArticleFormState,
-  formData: FormData,
-): Promise<ArticleFormState> {
+  payload: DraftSaveInput,
+): Promise<SaveContentResult> {
   const user = await requirePermission("article:update");
 
   const owned = await requireOwnedArticle(articleId, user.id);
@@ -113,64 +94,154 @@ export async function updateArticleAction(
     return { error: "You can only edit your own articles." };
   }
 
-  const parsed = articleFormSchema.safeParse(parseFormData(formData));
+  if (!CONTENT_EDITABLE_STATUSES.includes(owned.status)) {
+    return { error: "This article can't be edited in its current status." };
+  }
+
+  const parsed = draftSaveSchema.safeParse(payload);
   if (!parsed.success) {
-    return { fieldErrors: parsed.error.flatten().fieldErrors };
+    return { error: "Couldn't save — check the content and try again." };
   }
   const data = parsed.data;
 
-  if (!(await assertSlugAvailable(data.slug, articleId))) {
-    return { fieldErrors: { slug: ["That slug is already in use."] } };
-  }
-
-  const status = data.status ?? owned.status;
-  if (
-    (status === "PUBLISHED" || status === "SCHEDULED") &&
-    !hasPermission(user, "article:publish")
-  ) {
-    return {
-      fieldErrors: {
-        status: ["You don't have permission to publish or schedule articles."],
-      },
-    };
-  }
-
-  const blocks = plainTextToBlocks(data.content);
-  const isPublished = status === "PUBLISHED";
+  const title = data.title.trim() || "Untitled";
+  const desiredSlug = data.slug ? slugify(data.slug) : owned.slug;
+  const slug =
+    desiredSlug === owned.slug ||
+    (await assertSlugAvailable(desiredSlug, articleId))
+      ? desiredSlug || owned.slug
+      : owned.slug;
 
   await prisma.$transaction([
     prisma.article.update({
       where: { id: articleId },
       data: {
-        title: data.title,
-        slug: data.slug,
-        excerpt: data.excerpt || null,
-        featuredImage: data.featuredImage || null,
-        status,
-        categoryId: data.categoryId || null,
-        publishedAt: isPublished ? new Date() : null,
-        scheduledAt:
-          status === "SCHEDULED" ? new Date(data.scheduledAt!) : null,
+        title,
+        slug,
+        excerpt: data.subtitle?.trim() || null,
       },
     }),
     prisma.articleBlock.deleteMany({ where: { articleId } }),
-    prisma.articleBlock.createMany({
-      data: blocks.map((block, index) => ({
-        type: block.type,
-        content: block.content as Prisma.InputJsonValue,
-        articleId,
-        position: index,
-      })),
-    }),
-    prisma.articleTag.deleteMany({ where: { articleId } }),
-    prisma.articleTag.createMany({
-      data: data.tagIds.map((tagId) => ({ articleId, tagId })),
-    }),
+    ...(data.blocks.length > 0
+      ? [
+          prisma.articleBlock.createMany({
+            data: data.blocks.map((block, index) => ({
+              articleId,
+              type: block.type,
+              content: block.content as Prisma.InputJsonValue,
+              position: index,
+            })),
+          }),
+        ]
+      : []),
   ]);
 
   revalidatePath("/author/articles");
-  revalidatePath(`/article/${data.slug}`);
-  redirect("/author/articles");
+  if (owned.status === "PUBLISHED") revalidatePath(`/article/${slug}`);
+
+  return { savedAt: new Date().toISOString(), slug };
+}
+
+export interface WorkflowActionResult {
+  error?: string;
+}
+
+export async function submitForReviewAction(
+  articleId: string,
+): Promise<WorkflowActionResult> {
+  const user = await requirePermission("article:update");
+
+  const owned = await requireOwnedArticle(articleId, user.id);
+  if (!owned) {
+    return { error: "You can only submit your own articles." };
+  }
+  if (owned.status !== "DRAFT" && owned.status !== "CHANGES_REQUESTED") {
+    return { error: "Only drafts can be submitted for review." };
+  }
+
+  const article = await prisma.article.findUnique({
+    where: { id: articleId },
+    select: { title: true, _count: { select: { blocks: true } } },
+  });
+
+  if (!article || article.title.trim().length < 3) {
+    return { error: "Give the article a title before submitting." };
+  }
+  if (article._count.blocks === 0) {
+    return { error: "Add at least one block before submitting." };
+  }
+
+  await prisma.article.update({
+    where: { id: articleId },
+    data: { status: "IN_REVIEW" },
+  });
+  revalidatePath("/author/articles");
+  return {};
+}
+
+export async function publishArticleAction(
+  articleId: string,
+  payload: PublishSettingsInput,
+): Promise<WorkflowActionResult> {
+  const user = await requirePermission("article:publish");
+
+  const owned = await requireOwnedArticle(articleId, user.id);
+  if (!owned) {
+    return { error: "You can only publish your own articles." };
+  }
+  if (owned.status === "ARCHIVED") {
+    return { error: "Archived articles can't be published directly." };
+  }
+
+  const parsed = publishSettingsSchema.safeParse(payload);
+  if (!parsed.success) {
+    return {
+      error:
+        parsed.error.issues[0]?.message ??
+        "Check the publish settings and try again.",
+    };
+  }
+  const data = parsed.data;
+
+  const blockCount = await prisma.articleBlock.count({ where: { articleId } });
+  if (blockCount === 0) {
+    return { error: "Add at least one block before publishing." };
+  }
+
+  const isScheduled = data.mode === "schedule";
+
+  await prisma.$transaction([
+    prisma.article.update({
+      where: { id: articleId },
+      data: {
+        featuredImage: data.featuredImage || null,
+        categoryId: data.categoryId || null,
+        status: isScheduled ? "SCHEDULED" : "PUBLISHED",
+        publishedAt: isScheduled ? null : new Date(),
+        scheduledAt: isScheduled ? new Date(data.scheduledAt!) : null,
+        seo: data.seo
+          ? ({
+              metaTitle: data.seo.metaTitle || undefined,
+              metaDescription: data.seo.metaDescription || undefined,
+              ogImage: data.seo.ogImage || undefined,
+              canonicalUrl: data.seo.canonicalUrl || undefined,
+            } satisfies Prisma.InputJsonValue)
+          : undefined,
+      },
+    }),
+    prisma.articleTag.deleteMany({ where: { articleId } }),
+    ...(data.tagIds.length > 0
+      ? [
+          prisma.articleTag.createMany({
+            data: data.tagIds.map((tagId) => ({ articleId, tagId })),
+          }),
+        ]
+      : []),
+  ]);
+
+  revalidatePath("/author/articles");
+  revalidatePath(`/article/${owned.slug}`);
+  return {};
 }
 
 export async function duplicateArticleAction(
@@ -186,6 +257,7 @@ export async function duplicateArticleAction(
       excerpt: true,
       featuredImage: true,
       categoryId: true,
+      seo: true,
       blocks: {
         orderBy: { position: "asc" },
         select: { type: true, position: true, content: true },
@@ -198,12 +270,7 @@ export async function duplicateArticleAction(
     return { error: "You can only duplicate your own articles." };
   }
 
-  let slug = `${original.slug}-copy`;
-  let suffix = 2;
-  while (!(await assertSlugAvailable(slug))) {
-    slug = `${original.slug}-copy-${suffix}`;
-    suffix += 1;
-  }
+  const slug = await uniqueSlugFrom(`${original.slug}-copy`);
 
   const copy = await prisma.article.create({
     data: {
@@ -214,11 +281,12 @@ export async function duplicateArticleAction(
       status: "DRAFT",
       authorId: user.id,
       categoryId: original.categoryId,
+      seo: original.seo ?? undefined,
       blocks: {
         create: original.blocks.map((block) => ({
           type: block.type,
           position: block.position,
-          content: block.content as object,
+          content: block.content as Prisma.InputJsonValue,
         })),
       },
       tags: { create: original.tags.map((tag) => ({ tagId: tag.tagId })) },

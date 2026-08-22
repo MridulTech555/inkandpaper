@@ -71,6 +71,7 @@ export default async function ArticlePreviewPage({ params }: PreviewPageProps) {
             src={article.featuredImage}
             alt=""
             fill
+            unoptimized
             className="object-cover"
           />
         </div>

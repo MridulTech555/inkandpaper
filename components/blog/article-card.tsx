@@ -75,6 +75,7 @@ export function ArticleCard({
           {article.featuredImage ? (
             <Image
               src={article.featuredImage}
+              unoptimized
               alt=""
               fill
               sizes="(min-width: 768px) 50vw, 100vw"
@@ -114,6 +115,7 @@ export function ArticleCard({
           {article.featuredImage ? (
             <Image
               src={article.featuredImage}
+              unoptimized
               alt=""
               fill
               sizes="160px"
@@ -166,6 +168,7 @@ export function ArticleCard({
         {article.featuredImage ? (
           <Image
             src={article.featuredImage}
+            unoptimized
             alt=""
             fill
             sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"

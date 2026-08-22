@@ -83,6 +83,7 @@ export async function getOwnedArticleForEdit(
       status: true,
       scheduledAt: true,
       categoryId: true,
+      seo: true,
       blocks: {
         orderBy: { position: "asc" },
         select: { type: true, content: true },

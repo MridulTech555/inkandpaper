@@ -29,6 +29,21 @@ interface ArticlePageProps {
   params: Promise<{ slug: string }>;
 }
 
+interface ArticleSeo {
+  metaTitle?: unknown;
+  metaDescription?: unknown;
+  ogImage?: unknown;
+  canonicalUrl?: unknown;
+}
+
+function seoString(
+  seo: ArticleSeo | null,
+  key: keyof ArticleSeo,
+): string | undefined {
+  const value = seo?.[key];
+  return typeof value === "string" && value.length > 0 ? value : undefined;
+}
+
 export async function generateMetadata({
   params,
 }: ArticlePageProps): Promise<Metadata> {
@@ -36,25 +51,31 @@ export async function generateMetadata({
   const article = await getArticleBySlug(slug);
   if (!article) return {};
 
+  const seo = article.seo as ArticleSeo | null;
+  const title = seoString(seo, "metaTitle") ?? article.title;
+  const description =
+    seoString(seo, "metaDescription") ?? article.excerpt ?? undefined;
+  const image = seoString(seo, "ogImage") ?? article.featuredImage ?? undefined;
+  const canonicalUrl = seoString(seo, "canonicalUrl");
+
   return {
-    title: article.title,
-    description: article.excerpt ?? undefined,
+    title,
+    description,
+    alternates: canonicalUrl ? { canonical: canonicalUrl } : undefined,
     openGraph: {
-      title: article.title,
-      description: article.excerpt ?? undefined,
+      title,
+      description,
       type: "article",
       publishedTime: article.publishedAt?.toISOString(),
       authors: [article.author.name],
-      images: article.featuredImage
-        ? [{ url: article.featuredImage }]
-        : undefined,
+      images: image ? [{ url: image }] : undefined,
       url: `${siteConfig.url}/article/${article.slug}`,
     },
     twitter: {
       card: "summary_large_image",
-      title: article.title,
-      description: article.excerpt ?? undefined,
-      images: article.featuredImage ? [article.featuredImage] : undefined,
+      title,
+      description,
+      images: image ? [image] : undefined,
     },
   };
 }
@@ -164,6 +185,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
             alt=""
             fill
             priority
+            unoptimized
             sizes="(min-width: 1024px) 1024px, 100vw"
             className="object-cover"
           />

@@ -1,12 +1,10 @@
-import Link from "next/link";
 import type { ArticleStatus } from "@prisma/client";
-import { PenSquare } from "lucide-react";
 import { requireUser } from "@/lib/permissions/check";
 import { getAuthorArticles } from "@/lib/services/author-articles";
 import { H1 } from "@/components/ui/typography";
-import { Button } from "@/components/ui/button";
 import { ArticleTabs } from "@/components/author/article-tabs";
 import { ArticleTable } from "@/components/author/article-table";
+import { WriteArticleButton } from "@/components/author/write-article-button";
 import { ResultsPagination } from "@/components/blog/results-pagination";
 
 const PAGE_SIZE = 10;
@@ -43,12 +41,7 @@ export default async function AuthorArticlesPage({
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <H1 className="text-2xl">Articles</H1>
-        <Button asChild>
-          <Link href="/author/articles/new">
-            <PenSquare className="h-4 w-4" />
-            Write article
-          </Link>
-        </Button>
+        <WriteArticleButton />
       </div>
 
       <ArticleTabs currentStatus={status ?? ""} />

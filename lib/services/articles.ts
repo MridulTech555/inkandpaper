@@ -76,6 +76,7 @@ export async function getArticleBySlug(slug: string) {
       excerpt: true,
       featuredImage: true,
       publishedAt: true,
+      seo: true,
       category: { select: { id: true, name: true, slug: true } },
       author: {
         select: {
@@ -195,58 +196,4 @@ export function extractHeadings(
       };
     })
     .filter((heading) => heading.text.length > 0);
-}
-
-// ---------------------------------------------------------------------------
-// Plain-text editor <-> blocks
-//
-// The author-facing editor is deliberately simple: one big textarea, not a
-// visual block editor. A blank line separates blocks; "## " starts a
-// heading, "> " starts a quote, anything else is a paragraph. This covers
-// every block type the seed data and public rendering already support
-// (PARAGRAPH/HEADING/QUOTE) without building block-level UI. Block types
-// outside that set (IMAGE, GALLERY, TABLE, ...) aren't produced by this
-// editor and fall back to their plain text if encountered when editing.
-// ---------------------------------------------------------------------------
-
-export interface EditableBlock {
-  type: "PARAGRAPH" | "HEADING" | "QUOTE";
-  content: Record<string, unknown>;
-}
-
-export function blocksToPlainText(
-  blocks: { type: string; content: unknown }[],
-): string {
-  return blocks
-    .map((block) => {
-      const text = blockText(block.content);
-      if (!text) return "";
-      if (block.type === "HEADING") return `## ${text}`;
-      if (block.type === "QUOTE") return `> ${text}`;
-      return text;
-    })
-    .filter(Boolean)
-    .join("\n\n");
-}
-
-export function plainTextToBlocks(text: string): EditableBlock[] {
-  return text
-    .split(/\n\s*\n/)
-    .map((paragraph) => paragraph.trim())
-    .filter(Boolean)
-    .map((paragraph) => {
-      if (paragraph.startsWith("## ")) {
-        return {
-          type: "HEADING" as const,
-          content: { text: paragraph.slice(3).trim(), level: 2 },
-        };
-      }
-      if (paragraph.startsWith("> ")) {
-        return {
-          type: "QUOTE" as const,
-          content: { text: paragraph.slice(2).trim() },
-        };
-      }
-      return { type: "PARAGRAPH" as const, content: { text: paragraph } };
-    });
 }
