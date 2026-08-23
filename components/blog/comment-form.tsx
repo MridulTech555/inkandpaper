@@ -16,7 +16,7 @@ export function CommentForm({
 }: {
   articleId: string;
   articlePath: string;
-  currentUser: { name: string } | null;
+  currentUser: { name: string; avatarUrl: string | null } | null;
 }) {
   const router = useRouter();
   const [content, setContent] = useState("");
@@ -52,7 +52,11 @@ export function CommentForm({
 
   return (
     <div className="flex gap-3">
-      <Avatar fallback={currentUser.name.charAt(0)} size="sm" />
+      <Avatar
+        fallback={currentUser.name.charAt(0)}
+        src={currentUser.avatarUrl ?? undefined}
+        size="sm"
+      />
       <div className="flex flex-1 flex-col gap-2">
         <Textarea
           value={content}

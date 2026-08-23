@@ -31,7 +31,11 @@ export function AccountMenu({
           className="focus-visible:ring-primary ml-1 rounded-full focus-visible:ring-2 focus-visible:outline-none"
           aria-label="Account menu"
         >
-          <Avatar fallback={user.name.charAt(0)} size="sm" />
+          <Avatar
+            fallback={user.name.charAt(0)}
+            src={user.avatarUrl ?? undefined}
+            size="sm"
+          />
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
@@ -42,6 +46,9 @@ export function AccountMenu({
           </span>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
+        <DropdownMenuItem asChild>
+          <Link href="/account">Your account</Link>
+        </DropdownMenuItem>
         <DropdownMenuItem asChild>
           <Link href="/bookmarks">Bookmarks</Link>
         </DropdownMenuItem>

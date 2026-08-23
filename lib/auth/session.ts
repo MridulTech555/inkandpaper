@@ -13,6 +13,7 @@ export interface SessionUser {
   id: string;
   name: string;
   email: string;
+  avatarUrl: string | null;
   role: { id: string; name: RoleName };
   permissions: string[];
 }
@@ -84,6 +85,7 @@ export const getCurrentUser = cache(async (): Promise<SessionUser | null> => {
           id: true,
           name: true,
           email: true,
+          avatarUrl: true,
           status: true,
           role: {
             select: {
@@ -112,6 +114,7 @@ export const getCurrentUser = cache(async (): Promise<SessionUser | null> => {
     id: session.user.id,
     name: session.user.name,
     email: session.user.email,
+    avatarUrl: session.user.avatarUrl,
     role: {
       id: session.user.role.id,
       name: session.user.role.name as RoleName,

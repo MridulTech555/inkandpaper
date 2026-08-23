@@ -1,10 +1,18 @@
+import type { Metadata } from "next";
 import { RegisterForm } from "@/components/auth/register-form";
+import { AuthShell } from "@/components/auth/auth-shell";
+
+export const metadata: Metadata = {
+  title: "Register",
+};
 
 export default function RegisterPage() {
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-6 px-6 py-24">
-      <h1 className="text-2xl font-semibold tracking-tight">Register</h1>
+    <AuthShell
+      title="Create your account"
+      subtitle="Join Ink & Paper to bookmark, comment, and follow your favorite authors."
+    >
       <RegisterForm />
-    </div>
+    </AuthShell>
   );
 }

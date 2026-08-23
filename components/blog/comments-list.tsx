@@ -9,7 +9,7 @@ export interface CommentEntry {
   createdAt: Date;
   userId: string;
   status: CommentStatus;
-  user: { name: string };
+  user: { name: string; avatarUrl: string | null };
 }
 
 export function CommentsList({

@@ -29,7 +29,11 @@ export async function AdminHeader({ user }: { user: SessionUser }) {
           <p className="text-foreground text-sm font-medium">{user.name}</p>
           <p className="text-foreground-muted text-xs">{user.role.name}</p>
         </div>
-        <Avatar fallback={user.name.charAt(0)} size="sm" />
+        <Avatar
+          fallback={user.name.charAt(0)}
+          src={user.avatarUrl ?? undefined}
+          size="sm"
+        />
         <LogoutButton />
       </div>
     </header>

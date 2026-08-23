@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { optionalImageUrlSchema } from "@/lib/validation/url";
 
 export const profileFormSchema = z.object({
   name: z
@@ -7,7 +8,7 @@ export const profileFormSchema = z.object({
     .min(2, "Name must be at least 2 characters.")
     .max(100),
   bio: z.string().trim().max(500).optional(),
-  avatarUrl: z.union([z.url("Enter a valid URL."), z.literal("")]).optional(),
+  avatarUrl: optionalImageUrlSchema,
   twitter: z.union([z.url("Enter a valid URL."), z.literal("")]).optional(),
   website: z.union([z.url("Enter a valid URL."), z.literal("")]).optional(),
 });

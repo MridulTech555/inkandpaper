@@ -104,7 +104,7 @@ export async function getArticleBySlug(slug: string) {
           updatedAt: true,
           userId: true,
           status: true,
-          user: { select: { name: true } },
+          user: { select: { name: true, avatarUrl: true } },
         },
       },
       _count: { select: { likes: true } },

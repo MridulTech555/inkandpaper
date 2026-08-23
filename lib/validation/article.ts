@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { articleBlockSchema } from "@/lib/validation/article-block";
+import { optionalImageUrlSchema } from "@/lib/validation/url";
 
 const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
@@ -28,7 +29,7 @@ export const submitForReviewSchema = z.object({
 export const seoSettingsSchema = z.object({
   metaTitle: z.string().max(70).optional(),
   metaDescription: z.string().max(160).optional(),
-  ogImage: z.union([z.url("Enter a valid URL."), z.literal("")]).optional(),
+  ogImage: optionalImageUrlSchema,
   canonicalUrl: z
     .union([z.url("Enter a valid URL."), z.literal("")])
     .optional(),
@@ -36,7 +37,7 @@ export const seoSettingsSchema = z.object({
 
 export const publishSettingsSchema = z
   .object({
-    featuredImage: z.union([z.url("Enter a valid URL."), z.literal("")]),
+    featuredImage: optionalImageUrlSchema,
     categoryId: z.string().optional(),
     tagIds: z.array(z.string()).default([]),
     mode: z.enum(["now", "schedule"]),

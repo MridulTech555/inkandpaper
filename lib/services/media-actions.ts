@@ -17,6 +17,7 @@ import {
 
 export interface MediaActionState {
   error?: string;
+  url?: string;
 }
 
 // Uploaded files are written to public/uploads on the local filesystem.
@@ -74,9 +75,10 @@ export async function uploadMediaAction(
   const storedFilename = `${randomUUID()}-${safeName}.${extension}`;
   await writeFile(path.join(UPLOAD_DIR, storedFilename), buffer);
 
+  const url = `/uploads/${storedFilename}`;
   await prisma.media.create({
     data: {
-      url: `/uploads/${storedFilename}`,
+      url,
       filename: file.name || storedFilename,
       mimeType: sniffedType,
       size: file.size,
@@ -85,7 +87,7 @@ export async function uploadMediaAction(
   });
 
   revalidatePath("/author/media");
-  return {};
+  return { url };
 }
 
 export async function deleteMediaAction(

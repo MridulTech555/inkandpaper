@@ -78,6 +78,8 @@ model User {
   name         String
   email        String     @unique
   passwordHash String
+  avatarUrl    String?
+  bio          String?
   roleId       String
   status       UserStatus @default(ACTIVE)
   createdAt    DateTime   @default(now())

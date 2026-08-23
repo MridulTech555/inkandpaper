@@ -1,10 +1,18 @@
+import type { Metadata } from "next";
 import { LoginForm } from "@/components/auth/login-form";
+import { AuthShell } from "@/components/auth/auth-shell";
+
+export const metadata: Metadata = {
+  title: "Log in",
+};
 
 export default function LoginPage() {
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-6 px-6 py-24">
-      <h1 className="text-2xl font-semibold tracking-tight">Log in</h1>
+    <AuthShell
+      title="Welcome back"
+      subtitle="Log in to keep reading, writing, and reviewing."
+    >
       <LoginForm />
-    </div>
+    </AuthShell>
   );
 }

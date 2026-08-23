@@ -32,6 +32,7 @@ export async function PublicHeader() {
         name: sessionUser.name,
         email: sessionUser.email,
         role: sessionUser.role.name,
+        avatarUrl: sessionUser.avatarUrl,
       }
     : null;
 

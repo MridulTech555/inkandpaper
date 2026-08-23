@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { optionalImageUrlSchema } from "@/lib/validation/url";
 
 const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
@@ -12,7 +13,7 @@ export const categoryFormSchema = z.object({
     .optional()
     .or(z.literal("")),
   description: z.string().trim().max(300).optional().or(z.literal("")),
-  image: z.union([z.url("Enter a valid URL."), z.literal("")]).optional(),
+  image: optionalImageUrlSchema,
 });
 
 export type CategoryFormInput = z.infer<typeof categoryFormSchema>;

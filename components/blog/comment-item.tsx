@@ -99,7 +99,11 @@ export function CommentItem({
 
   return (
     <li className="flex gap-3">
-      <Avatar fallback={comment.user.name.charAt(0)} size="sm" />
+      <Avatar
+        fallback={comment.user.name.charAt(0)}
+        src={comment.user.avatarUrl ?? undefined}
+        size="sm"
+      />
       <div className="flex flex-1 flex-col gap-1">
         <div className="flex items-baseline gap-2">
           <p className="text-foreground text-sm font-medium">
