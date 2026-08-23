@@ -1,6 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import {
   BarChart3,
+  ClipboardCheck,
   FileText,
   FolderTree,
   Image as ImageIcon,
@@ -8,7 +9,6 @@ import {
   LayoutDashboard,
   Mail,
   MessageSquare,
-  Plug,
   ScrollText,
   Settings,
   Tags,
@@ -38,6 +38,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     label: "Content",
     items: [
       { label: "Articles", href: "/admin/articles", icon: FileText },
+      { label: "Review queue", href: "/admin/review", icon: ClipboardCheck },
       { label: "Categories", href: "/admin/categories", icon: FolderTree },
       { label: "Tags", href: "/admin/tags", icon: Tags },
       { label: "Media", href: "/admin/media", icon: ImageIcon },
@@ -63,8 +64,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
   {
     label: "System",
     items: [
-      { label: "Settings", href: "/admin/settings", icon: Settings },
-      { label: "Integrations", href: "/admin/integrations", icon: Plug },
+      { label: "Settings", href: "/admin/settings/general", icon: Settings },
       { label: "Audit Logs", href: "/admin/audit-logs", icon: ScrollText },
     ],
   },

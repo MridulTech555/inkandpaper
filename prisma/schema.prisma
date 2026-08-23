@@ -63,6 +63,12 @@ enum SubscriberStatus {
   UNSUBSCRIBED
 }
 
+enum AuthorRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 // ---------------------------------------------------------------------------
 // Identity & access control
 // ---------------------------------------------------------------------------
@@ -91,6 +97,8 @@ model User {
   auditLogs        AuditLog[]
   sessions         Session[]
   articleViews     ArticleView[]
+  authorRequests   AuthorRequest[]   @relation("AuthorRequestUser")
+  reviewedRequests AuthorRequest[]   @relation("AuthorRequestReviewer")
 
   @@index([roleId])
   @@index([status])
@@ -394,4 +402,32 @@ model AuditLog {
   @@index([userId])
   @@index([entity, entityId])
   @@index([createdAt])
+}
+
+/// A reader asking to be promoted to AUTHOR. Reviewed from the admin
+/// Needs Attention panel; approving grants the AUTHOR role and creates an
+/// AuthorProfile if the user doesn't have one yet.
+model AuthorRequest {
+  id           String              @id @default(cuid())
+  userId       String
+  message      String?
+  status       AuthorRequestStatus @default(PENDING)
+  reviewedById String?
+  reviewedAt   DateTime?
+  createdAt    DateTime            @default(now())
+
+  user       User  @relation("AuthorRequestUser", fields: [userId], references: [id], onDelete: Cascade)
+  reviewedBy User? @relation("AuthorRequestReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@index([status])
+  @@index([userId])
+}
+
+/// Site configuration, grouped by settings-page section (general, branding,
+/// seo, notifications, security, integrations). One row per section keeps
+/// each page's save action scoped to just its own JSON blob.
+model Setting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
 }

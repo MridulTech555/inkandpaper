@@ -17,6 +17,15 @@ export function hasRole(
   return user !== null && roles.includes(user.role.name);
 }
 
+/**
+ * SUPER_ADMIN, ADMIN, and EDITOR can act on any author's articles (edit,
+ * preview, archive, delete, submit) from the admin console — AUTHOR remains
+ * scoped to their own work everywhere else.
+ */
+export function isManagerRole(user: SessionUser | null): boolean {
+  return hasRole(user, "SUPER_ADMIN", "ADMIN", "EDITOR");
+}
+
 /** Redirects to /auth/login if there is no authenticated user. */
 export async function requireUser(): Promise<SessionUser> {
   const user = await getCurrentUser();

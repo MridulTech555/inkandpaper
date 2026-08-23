@@ -10,6 +10,10 @@ export const PERMISSIONS = [
   "category:update",
   "category:delete",
 
+  "tag:create",
+  "tag:update",
+  "tag:delete",
+
   "comment:moderate",
 
   "user:create",
@@ -23,6 +27,10 @@ export const PERMISSIONS = [
   "analytics:view",
 
   "settings:manage",
+
+  "role:manage",
+
+  "audit:view",
 ] as const;
 
 export type PermissionName = (typeof PERMISSIONS)[number];
@@ -48,6 +56,9 @@ export const ROLE_PERMISSIONS: Record<RoleName, readonly PermissionName[]> = {
     "category:create",
     "category:update",
     "category:delete",
+    "tag:create",
+    "tag:update",
+    "tag:delete",
     "comment:moderate",
     "user:create",
     "user:update",
@@ -56,6 +67,7 @@ export const ROLE_PERMISSIONS: Record<RoleName, readonly PermissionName[]> = {
     "author:update",
     "author:manage",
     "analytics:view",
+    "audit:view",
   ],
   EDITOR: [
     "article:read",

@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth/session";
+import { isManagerRole } from "@/lib/permissions/check";
 import { getOwnedArticleForPreview } from "@/lib/services/author-articles";
 import { computeReadingTime, extractHeadings } from "@/lib/services/articles";
 import { Alert } from "@/components/ui/alert";
@@ -19,7 +20,11 @@ interface PreviewPageProps {
 export default async function ArticlePreviewPage({ params }: PreviewPageProps) {
   const { id } = await params;
   const user = await getCurrentUser();
-  const article = await getOwnedArticleForPreview(id, user!.id);
+  const article = await getOwnedArticleForPreview(
+    id,
+    user!.id,
+    isManagerRole(user),
+  );
   if (!article) notFound();
 
   const readingTime = computeReadingTime(article.blocks);

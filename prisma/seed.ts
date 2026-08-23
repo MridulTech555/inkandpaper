@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { Prisma, PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import {
   PERMISSIONS,
@@ -369,6 +369,129 @@ async function main() {
         content: commentContent,
         status: "VISIBLE",
       },
+    });
+  }
+
+  const reader = usersByRole.get("READER")!;
+
+  // A reader asking for author access, and a comment flagged for moderation —
+  // both feed the admin dashboard's "Needs attention" panel with real rows
+  // instead of always showing zero until the app has real traffic.
+  await prisma.authorRequest.upsert({
+    where: { id: "seed-author-request-riley" },
+    update: {},
+    create: {
+      id: "seed-author-request-riley",
+      userId: reader.id,
+      message:
+        "I've been writing for a few years and would love to contribute.",
+      status: "PENDING",
+    },
+  });
+
+  const firstArticle = await prisma.article.findUnique({
+    where: { slug: articleData[0].slug },
+    select: { id: true },
+  });
+  if (firstArticle) {
+    await prisma.comment.upsert({
+      where: { id: "seed-comment-reported" },
+      update: { status: "REPORTED" },
+      create: {
+        id: "seed-comment-reported",
+        articleId: firstArticle.id,
+        userId: reader.id,
+        content: "This link looks suspicious, please review.",
+        status: "REPORTED",
+      },
+    });
+  }
+
+  // An overdue scheduled article — surfaces in "Needs attention" as a
+  // failed-publish signal (a scheduled time that has already passed).
+  const overdueScheduledData = {
+    title: "The Overdue Draft",
+    excerpt: "This one missed its publish window.",
+    status: "SCHEDULED" as const,
+    authorId: authorUser.id,
+    categoryId: categories[0].id,
+    scheduledAt: new Date(Date.now() - 2 * 60 * 60 * 1000),
+  };
+  await prisma.article.upsert({
+    where: { slug: "the-overdue-draft" },
+    update: overdueScheduledData,
+    create: { slug: "the-overdue-draft", ...overdueScheduledData },
+  });
+
+  // An article awaiting editorial review — feeds the review queue.
+  const inReviewData = {
+    title: "First Impressions of the New Editor",
+    excerpt: "A quick look at the new writing tools.",
+    status: "IN_REVIEW" as const,
+    authorId: authorUser.id,
+    categoryId: categories[0].id,
+  };
+  const inReviewArticle = await prisma.article.upsert({
+    where: { slug: "first-impressions-of-the-new-editor" },
+    update: inReviewData,
+    create: { slug: "first-impressions-of-the-new-editor", ...inReviewData },
+  });
+  await prisma.articleBlock.deleteMany({
+    where: { articleId: inReviewArticle.id },
+  });
+  await prisma.articleBlock.create({
+    data: {
+      articleId: inReviewArticle.id,
+      type: "PARAGRAPH",
+      position: 0,
+      content: {
+        text: "The new block editor makes it much easier to compose a mix of text, images, and callouts without leaving the writing flow.",
+      },
+    },
+  });
+
+  // Default site settings — one row per admin settings section.
+  const defaultSettings: Record<string, Record<string, unknown>> = {
+    general: {
+      siteName: "Ink & Paper",
+      tagline: "Stories worth staying up for.",
+      supportEmail: "hello@inknpaper.dev",
+      timezone: "UTC",
+    },
+    branding: {
+      logoUrl: "",
+      faviconUrl: "",
+      primaryColor: "#111111",
+      accentColor: "#6366f1",
+    },
+    seo: {
+      defaultMetaTitle: "Ink & Paper",
+      defaultMetaDescription: "A modern blogging platform.",
+      defaultOgImage: "",
+      twitterHandle: "",
+    },
+    notifications: {
+      notifyOnNewComment: true,
+      notifyOnReviewSubmitted: true,
+      notifyOnAuthorRequest: true,
+      digestFrequency: "daily",
+    },
+    security: {
+      requireTwoFactorForAdmins: false,
+      sessionDurationDays: "30",
+      allowPublicRegistration: true,
+    },
+    integrations: {
+      googleAnalyticsId: "",
+      slackWebhookUrl: "",
+      mailProvider: "none",
+    },
+  };
+  for (const [key, value] of Object.entries(defaultSettings)) {
+    await prisma.setting.upsert({
+      where: { key },
+      update: {},
+      create: { key, value: value as Prisma.InputJsonValue },
     });
   }
 

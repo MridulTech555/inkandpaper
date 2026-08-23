@@ -5,7 +5,8 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import type { ArticleStatus, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
-import { requirePermission } from "@/lib/permissions/check";
+import { isManagerRole, requirePermission } from "@/lib/permissions/check";
+import type { SessionUser } from "@/lib/auth/session";
 import {
   draftSaveSchema,
   publishSettingsSchema,
@@ -47,13 +48,16 @@ async function uniqueSlugFrom(base: string): Promise<string> {
 }
 
 /**
- * Looks up an article and verifies the CURRENT session user is its author.
- * Every mutation below calls this instead of trusting the articleId a
- * client sent — ownership is re-checked against the database on every call.
+ * Looks up an article and verifies the CURRENT session user may edit it —
+ * either they're its author, or they hold a manager role (SUPER_ADMIN,
+ * ADMIN, EDITOR) that can act on any article. Every mutation below calls
+ * this instead of trusting the articleId a client sent — the check is
+ * re-run against the database on every call, never cached from a prior read.
  */
-async function requireOwnedArticle(articleId: string, authorId: string) {
+async function requireOwnedArticle(articleId: string, user: SessionUser) {
+  const isManager = isManagerRole(user);
   return prisma.article.findFirst({
-    where: { id: articleId, authorId },
+    where: isManager ? { id: articleId } : { id: articleId, authorId: user.id },
     select: { id: true, slug: true, status: true },
   });
 }
@@ -89,7 +93,7 @@ export async function saveArticleContentAction(
 ): Promise<SaveContentResult> {
   const user = await requirePermission("article:update");
 
-  const owned = await requireOwnedArticle(articleId, user.id);
+  const owned = await requireOwnedArticle(articleId, user);
   if (!owned) {
     return { error: "You can only edit your own articles." };
   }
@@ -151,7 +155,7 @@ export async function submitForReviewAction(
 ): Promise<WorkflowActionResult> {
   const user = await requirePermission("article:update");
 
-  const owned = await requireOwnedArticle(articleId, user.id);
+  const owned = await requireOwnedArticle(articleId, user);
   if (!owned) {
     return { error: "You can only submit your own articles." };
   }
@@ -185,7 +189,7 @@ export async function publishArticleAction(
 ): Promise<WorkflowActionResult> {
   const user = await requirePermission("article:publish");
 
-  const owned = await requireOwnedArticle(articleId, user.id);
+  const owned = await requireOwnedArticle(articleId, user);
   if (!owned) {
     return { error: "You can only publish your own articles." };
   }
@@ -303,7 +307,7 @@ export async function archiveArticleAction(
 ): Promise<{ error?: string }> {
   const user = await requirePermission("article:update");
 
-  const owned = await requireOwnedArticle(articleId, user.id);
+  const owned = await requireOwnedArticle(articleId, user);
   if (!owned) {
     return { error: "You can only archive your own articles." };
   }
@@ -321,7 +325,7 @@ export async function deleteArticleAction(
 ): Promise<{ error?: string }> {
   const user = await requirePermission("article:delete");
 
-  const owned = await requireOwnedArticle(articleId, user.id);
+  const owned = await requireOwnedArticle(articleId, user);
   if (!owned) {
     return { error: "You can only delete your own articles." };
   }

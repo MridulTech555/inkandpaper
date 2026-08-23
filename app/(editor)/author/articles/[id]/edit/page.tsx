@@ -1,5 +1,9 @@
 import { notFound } from "next/navigation";
-import { hasPermission, requirePermission } from "@/lib/permissions/check";
+import {
+  hasPermission,
+  isManagerRole,
+  requirePermission,
+} from "@/lib/permissions/check";
 import { getCurrentUser } from "@/lib/auth/session";
 import { getOwnedArticleForEdit } from "@/lib/services/author-articles";
 import { getAllCategories } from "@/lib/services/categories";
@@ -39,7 +43,7 @@ export default async function EditArticlePage({
   const user = await getCurrentUser();
 
   const [article, categories, tags] = await Promise.all([
-    getOwnedArticleForEdit(id, user!.id),
+    getOwnedArticleForEdit(id, user!.id, isManagerRole(user)),
     getAllCategories(),
     prisma.tag.findMany({
       orderBy: { name: "asc" },

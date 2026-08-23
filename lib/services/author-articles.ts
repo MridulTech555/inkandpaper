@@ -71,9 +71,10 @@ export async function getArticlesNeedingAttention(authorId: string) {
 export async function getOwnedArticleForEdit(
   articleId: string,
   authorId: string,
+  isManager = false,
 ) {
   return prisma.article.findFirst({
-    where: { id: articleId, authorId },
+    where: isManager ? { id: articleId } : { id: articleId, authorId },
     select: {
       id: true,
       title: true,
@@ -96,9 +97,10 @@ export async function getOwnedArticleForEdit(
 export async function getOwnedArticleForPreview(
   articleId: string,
   authorId: string,
+  isManager = false,
 ) {
   return prisma.article.findFirst({
-    where: { id: articleId, authorId },
+    where: isManager ? { id: articleId } : { id: articleId, authorId },
     select: {
       id: true,
       title: true,

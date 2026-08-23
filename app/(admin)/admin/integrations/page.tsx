@@ -1,10 +1,5 @@
-import { RoutePlaceholder } from "@/components/shared/route-placeholder";
+import { redirect } from "next/navigation";
 
-export default function AdminIntegrationsPage() {
-  return (
-    <RoutePlaceholder
-      title="Integrations"
-      description="Third-party integrations are not implemented yet."
-    />
-  );
+export default function AdminIntegrationsRedirectPage() {
+  redirect("/admin/settings/integrations");
 }
