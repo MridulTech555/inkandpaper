@@ -1,12 +1,18 @@
 import "server-only";
-import type { Prisma } from "@prisma/client";
-import { prisma } from "@/lib/db/prisma";
-import { articleCardSelect } from "@/lib/services/articles";
+import { PostgresSearchProvider } from "@/lib/services/postgres-search-provider";
+import type { SearchProvider } from "@/lib/services/search-provider";
+
+// The active provider. Swapping to an external search engine later means
+// implementing SearchProvider once and changing this one line — nothing
+// that calls searchArticles() needs to know or care.
+const searchProvider: SearchProvider = new PostgresSearchProvider();
 
 export interface SearchArticlesParams {
   query?: string;
   categorySlug?: string;
   authorSlug?: string;
+  dateFrom?: Date;
+  dateTo?: Date;
   skip: number;
   take: number;
 }
@@ -15,31 +21,13 @@ export async function searchArticles({
   query,
   categorySlug,
   authorSlug,
+  dateFrom,
+  dateTo,
   skip,
   take,
 }: SearchArticlesParams) {
-  const where: Prisma.ArticleWhereInput = {
-    status: "PUBLISHED",
-    ...(query
-      ? {
-          OR: [
-            { title: { contains: query, mode: "insensitive" } },
-            { excerpt: { contains: query, mode: "insensitive" } },
-          ],
-        }
-      : {}),
-    ...(categorySlug ? { category: { slug: categorySlug } } : {}),
-    ...(authorSlug ? { author: { authorProfile: { slug: authorSlug } } } : {}),
-  };
-
-  return prisma.$transaction([
-    prisma.article.findMany({
-      where,
-      orderBy: { publishedAt: "desc" },
-      skip,
-      take,
-      select: articleCardSelect,
-    }),
-    prisma.article.count({ where }),
-  ]);
+  return searchProvider.search(
+    { query, categorySlug, authorSlug, dateFrom, dateTo },
+    { skip, take },
+  );
 }

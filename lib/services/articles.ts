@@ -95,15 +95,19 @@ export async function getArticleBySlug(slug: string) {
         select: { tag: { select: { id: true, name: true, slug: true } } },
       },
       comments: {
-        where: { status: "VISIBLE" },
+        where: { status: { in: ["VISIBLE", "REPORTED"] } },
         orderBy: { createdAt: "desc" },
         select: {
           id: true,
           content: true,
           createdAt: true,
+          updatedAt: true,
+          userId: true,
+          status: true,
           user: { select: { name: true } },
         },
       },
+      _count: { select: { likes: true } },
     },
   });
 }

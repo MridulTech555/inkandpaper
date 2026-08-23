@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,8 +23,11 @@ export function NewsletterCta() {
         Stay in the loop
       </h2>
       <p className="text-foreground-secondary mx-auto mt-2 max-w-md text-sm">
-        New essays and articles, straight to your inbox. No spam, unsubscribe
-        any time.
+        New essays and articles, straight to your inbox. No spam,{" "}
+        <Link href="/newsletter/unsubscribe" className="underline">
+          unsubscribe any time
+        </Link>
+        .
       </p>
 
       {state.success ? (

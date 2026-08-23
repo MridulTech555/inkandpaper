@@ -22,17 +22,23 @@ interface SearchPageProps {
     q?: string;
     category?: string;
     author?: string;
+    from?: string;
+    to?: string;
     page?: string;
   }>;
 }
 
 export default async function SearchPage({ searchParams }: SearchPageProps) {
-  const { q, category, author, page: pageParam } = await searchParams;
+  const { q, category, author, from, to, page: pageParam } = await searchParams;
   const query = q?.trim() ?? "";
   const page = Math.max(1, Number(pageParam) || 1);
   const skip = (page - 1) * PAGE_SIZE;
 
-  const hasCriteria = Boolean(query || category || author);
+  const dateFrom = from ? new Date(from) : undefined;
+  const dateTo = to ? new Date(to) : undefined;
+  const hasCriteria = Boolean(
+    query || category || author || dateFrom || dateTo,
+  );
 
   const [searchResult, categories, authors] = await Promise.all([
     hasCriteria
@@ -40,6 +46,8 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
           query: query || undefined,
           categorySlug: category || undefined,
           authorSlug: author || undefined,
+          dateFrom,
+          dateTo,
           skip,
           take: PAGE_SIZE,
         })
@@ -113,6 +121,20 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
               </option>
             ))}
           </select>
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="from" className="text-foreground text-sm font-medium">
+            From
+          </label>
+          <Input id="from" name="from" type="date" defaultValue={from} />
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="to" className="text-foreground text-sm font-medium">
+            To
+          </label>
+          <Input id="to" name="to" type="date" defaultValue={to} />
         </div>
 
         <Button type="submit">Search</Button>

@@ -3,11 +3,46 @@
 import { revalidatePath } from "next/cache";
 import { randomUUID } from "node:crypto";
 import { prisma } from "@/lib/db/prisma";
-import { requirePermission } from "@/lib/permissions/check";
+import { requirePermission, requireUser } from "@/lib/permissions/check";
 import { logAudit } from "@/lib/services/audit-log";
+import {
+  createNotification,
+  notifyUsersWithPermission,
+} from "@/lib/services/notifications";
 
 export interface AuthorRequestActionResult {
   error?: string;
+}
+
+export async function createAuthorRequestAction(
+  message: string,
+): Promise<AuthorRequestActionResult> {
+  const user = await requireUser();
+
+  if (user.role.name !== "READER") {
+    return { error: "Only readers can request author access." };
+  }
+
+  const existing = await prisma.authorRequest.findFirst({
+    where: { userId: user.id, status: "PENDING" },
+    select: { id: true },
+  });
+  if (existing) {
+    return { error: "You already have a pending request." };
+  }
+
+  await prisma.authorRequest.create({
+    data: { userId: user.id, message: message.trim() || null },
+  });
+
+  await notifyUsersWithPermission("author:manage", {
+    type: "author_request_created",
+    title: "New author request",
+    message: `${user.name} requested author access.`,
+    metadata: { userId: user.id },
+  });
+
+  return {};
 }
 
 export async function approveAuthorRequestAction(
@@ -67,6 +102,13 @@ export async function approveAuthorRequestAction(
     metadata: { userId: request.userId },
   });
 
+  await createNotification({
+    userId: request.userId,
+    type: "author_request_approved",
+    title: "Author request approved",
+    message: "You can now publish articles on Ink & Paper.",
+  });
+
   revalidatePath("/admin");
   revalidatePath("/admin/authors");
   revalidatePath("/admin/users");
@@ -80,7 +122,7 @@ export async function rejectAuthorRequestAction(
 
   const request = await prisma.authorRequest.findFirst({
     where: { id: requestId, status: "PENDING" },
-    select: { id: true },
+    select: { id: true, userId: true },
   });
   if (!request) return { error: "This request is no longer pending." };
 
@@ -98,6 +140,13 @@ export async function rejectAuthorRequestAction(
     action: "author_request.rejected",
     entity: "AuthorRequest",
     entityId: requestId,
+  });
+
+  await createNotification({
+    userId: request.userId,
+    type: "author_request_rejected",
+    title: "Author request declined",
+    message: "Your request for author access wasn't approved this time.",
   });
 
   revalidatePath("/admin");

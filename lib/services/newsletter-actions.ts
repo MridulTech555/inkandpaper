@@ -37,3 +37,32 @@ export async function subscribeToNewsletterAction(
 
   return { success: true };
 }
+
+export async function unsubscribeFromNewsletterAction(
+  _prevState: NewsletterActionState,
+  formData: FormData,
+): Promise<NewsletterActionState> {
+  const email = formData.get("email");
+
+  const parsed = newsletterSubscribeSchema.safeParse({ email });
+  if (!parsed.success) {
+    return {
+      error: parsed.error.issues[0]?.message ?? "Enter a valid email address.",
+    };
+  }
+
+  const subscriber = await prisma.newsletterSubscriber.findUnique({
+    where: { email: parsed.data.email },
+    select: { id: true },
+  });
+  if (!subscriber) {
+    return { error: "That email isn't subscribed." };
+  }
+
+  await prisma.newsletterSubscriber.update({
+    where: { id: subscriber.id },
+    data: { status: "UNSUBSCRIBED", unsubscribedAt: new Date() },
+  });
+
+  return { success: true };
+}

@@ -20,10 +20,13 @@ import { ArticleSection } from "@/components/blog/article-section";
 import { ArticleContent } from "@/components/blog/article-content";
 import { TableOfContents } from "@/components/blog/table-of-contents";
 import { CommentsList } from "@/components/blog/comments-list";
+import { CommentForm } from "@/components/blog/comment-form";
 import { AuthorBio } from "@/components/blog/author-bio";
 import { BookmarkButton } from "@/components/blog/bookmark-button";
+import { LikeButton } from "@/components/blog/like-button";
 import { ShareButton } from "@/components/blog/share-button";
 import { NewsletterCta } from "@/components/blog/newsletter-cta";
+import { JsonLd } from "@/components/seo/json-ld";
 
 interface ArticlePageProps {
   params: Promise<{ slug: string }>;
@@ -98,16 +101,34 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
     getCurrentUser(),
   ]);
 
-  const initialBookmarked = currentUser
-    ? Boolean(
-        await prisma.bookmark.findUnique({
-          where: {
-            userId_articleId: { userId: currentUser.id, articleId: article.id },
-          },
-          select: { id: true },
-        }),
-      )
-    : false;
+  const [initialBookmarked, initialLiked] = await Promise.all([
+    currentUser
+      ? prisma.bookmark
+          .findUnique({
+            where: {
+              userId_articleId: {
+                userId: currentUser.id,
+                articleId: article.id,
+              },
+            },
+            select: { id: true },
+          })
+          .then(Boolean)
+      : false,
+    currentUser
+      ? prisma.like
+          .findUnique({
+            where: {
+              userId_articleId: {
+                userId: currentUser.id,
+                articleId: article.id,
+              },
+            },
+            select: { id: true },
+          })
+          .then(Boolean)
+      : false,
+  ]);
 
   // Recorded after the response is sent so it never adds latency to the
   // page. Authors viewing their own article don't inflate their own count.
@@ -126,8 +147,45 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
     avatarUrl: article.author.authorProfile?.avatarUrl ?? null,
   };
 
+  const articleJsonLd: Record<string, unknown> = {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    headline: article.title,
+    description: article.excerpt ?? undefined,
+    image: article.featuredImage ?? undefined,
+    datePublished: article.publishedAt?.toISOString(),
+    dateModified: article.publishedAt?.toISOString(),
+    mainEntityOfPage: `${siteConfig.url}${articlePath}`,
+    author: authorForBio.slug
+      ? {
+          "@type": "Person",
+          name: authorForBio.name,
+          url: `${siteConfig.url}/author/${authorForBio.slug}`,
+        }
+      : { "@type": "Person", name: authorForBio.name },
+    publisher: {
+      "@type": "Organization",
+      name: siteConfig.name,
+      url: siteConfig.url,
+    },
+  };
+
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-4 py-8 sm:px-6">
+      <JsonLd data={articleJsonLd} />
+      {authorForBio.slug ? (
+        <JsonLd
+          data={{
+            "@context": "https://schema.org",
+            "@type": "Person",
+            name: authorForBio.name,
+            description: authorForBio.bio ?? undefined,
+            image: authorForBio.avatarUrl ?? undefined,
+            url: `${siteConfig.url}/author/${authorForBio.slug}`,
+          }}
+        />
+      ) : null}
+
       <Breadcrumb
         items={[
           { label: "Home", href: "/" },
@@ -169,6 +227,12 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
         </div>
 
         <div className="flex items-center gap-2">
+          <LikeButton
+            articleId={article.id}
+            articlePath={articlePath}
+            initialLiked={initialLiked}
+            initialCount={article._count.likes}
+          />
           <BookmarkButton
             articleId={article.id}
             articlePath={articlePath}
@@ -216,7 +280,16 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
 
           <section className="flex flex-col gap-4">
             <h2 className="text-foreground text-xl font-semibold">Comments</h2>
-            <CommentsList comments={article.comments} />
+            <CommentForm
+              articleId={article.id}
+              articlePath={articlePath}
+              currentUser={currentUser}
+            />
+            <CommentsList
+              comments={article.comments}
+              articlePath={articlePath}
+              currentUserId={currentUser?.id ?? null}
+            />
           </section>
         </div>
 

@@ -2,6 +2,10 @@ import Link from "next/link";
 import { Bookmark, Search } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth/session";
 import { hasRole } from "@/lib/permissions/check";
+import {
+  getUnreadNotificationCount,
+  getUserNotifications,
+} from "@/lib/services/notifications";
 import { Button } from "@/components/ui/button";
 import { SimpleTooltip } from "@/components/ui/tooltip";
 import {
@@ -12,6 +16,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { AccountMenu } from "@/components/navigation/account-menu";
 import { MobileNavigation } from "@/components/navigation/mobile-navigation";
+import { NotificationBell } from "@/components/shared/notification-bell";
 import type { PublicNavUser } from "@/types/navigation";
 
 const CATEGORY_LINKS = [
@@ -29,6 +34,13 @@ export async function PublicHeader() {
         role: sessionUser.role.name,
       }
     : null;
+
+  const [notifications, unreadCount] = sessionUser
+    ? await Promise.all([
+        getUserNotifications(sessionUser.id),
+        getUnreadNotificationCount(sessionUser.id),
+      ])
+    : [[], 0];
 
   return (
     <header className="border-border bg-background/95 sticky top-0 z-40 border-b backdrop-blur">
@@ -66,11 +78,22 @@ export async function PublicHeader() {
             </Button>
           </SimpleTooltip>
 
-          <SimpleTooltip label="Bookmarks">
-            <Button variant="ghost" size="icon" aria-label="Bookmarks">
-              <Bookmark className="h-4 w-4" />
-            </Button>
-          </SimpleTooltip>
+          {user ? (
+            <SimpleTooltip label="Bookmarks">
+              <Button asChild variant="ghost" size="icon">
+                <Link href="/bookmarks" aria-label="Bookmarks">
+                  <Bookmark className="h-4 w-4" />
+                </Link>
+              </Button>
+            </SimpleTooltip>
+          ) : null}
+
+          {user ? (
+            <NotificationBell
+              notifications={notifications}
+              unreadCount={unreadCount}
+            />
+          ) : null}
 
           <div className="hidden md:block">
             {user ? (

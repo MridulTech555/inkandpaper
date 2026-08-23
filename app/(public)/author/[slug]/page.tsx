@@ -27,6 +27,7 @@ export async function generateMetadata({
   return {
     title: profile.user.name,
     description: profile.bio ?? `Articles by ${profile.user.name}`,
+    alternates: { canonical: `${siteConfig.url}/author/${profile.slug}` },
     openGraph: {
       title: profile.user.name,
       description: profile.bio ?? undefined,

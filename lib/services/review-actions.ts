@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db/prisma";
 import { requirePermission } from "@/lib/permissions/check";
 import { logAudit } from "@/lib/services/audit-log";
+import { createNotification } from "@/lib/services/notifications";
 
 export interface ReviewActionResult {
   error?: string;
@@ -12,7 +13,7 @@ export interface ReviewActionResult {
 async function requireInReviewArticle(articleId: string) {
   return prisma.article.findFirst({
     where: { id: articleId, status: "IN_REVIEW" },
-    select: { id: true, slug: true },
+    select: { id: true, slug: true, title: true, authorId: true },
   });
 }
 
@@ -39,6 +40,14 @@ export async function approveArticleAction(
     action: "article.approved",
     entity: "Article",
     entityId: articleId,
+  });
+
+  await createNotification({
+    userId: article.authorId,
+    type: "article_approved",
+    title: "Article approved",
+    message: `"${article.title}" was approved and is ready to publish.`,
+    metadata: { articleId },
   });
 
   revalidatePath("/admin/review");
@@ -82,6 +91,14 @@ export async function requestChangesArticleAction(
     metadata: { feedback: feedback.trim() },
   });
 
+  await createNotification({
+    userId: article.authorId,
+    type: "article_changes_requested",
+    title: "Changes requested",
+    message: `"${article.title}": ${feedback.trim()}`,
+    metadata: { articleId },
+  });
+
   revalidatePath("/admin/review");
   revalidatePath("/admin/articles");
   return {};
@@ -116,6 +133,14 @@ export async function rejectArticleAction(
     action: "article.rejected",
     entity: "Article",
     entityId: articleId,
+  });
+
+  await createNotification({
+    userId: article.authorId,
+    type: "article_rejected",
+    title: "Article rejected",
+    message: `"${article.title}" was rejected.${feedback?.trim() ? ` ${feedback.trim()}` : ""}`,
+    metadata: { articleId },
   });
 
   revalidatePath("/admin/review");

@@ -1,23 +1,26 @@
-import { Avatar } from "@/components/ui/avatar";
 import { EmptyState } from "@/components/ui/empty-state";
 import { MessageSquare } from "lucide-react";
+import { CommentItem } from "@/components/blog/comment-item";
+import type { CommentStatus } from "@prisma/client";
 
 export interface CommentEntry {
   id: string;
   content: string;
   createdAt: Date;
+  userId: string;
+  status: CommentStatus;
   user: { name: string };
 }
 
-function formatDate(date: Date): string {
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  }).format(date);
-}
-
-export function CommentsList({ comments }: { comments: CommentEntry[] }) {
+export function CommentsList({
+  comments,
+  articlePath,
+  currentUserId,
+}: {
+  comments: CommentEntry[];
+  articlePath: string;
+  currentUserId: string | null;
+}) {
   if (comments.length === 0) {
     return (
       <EmptyState
@@ -31,25 +34,12 @@ export function CommentsList({ comments }: { comments: CommentEntry[] }) {
   return (
     <ul className="flex flex-col gap-6">
       {comments.map((comment) => (
-        <li key={comment.id} className="flex gap-3">
-          <Avatar fallback={comment.user.name.charAt(0)} size="sm" />
-          <div className="flex flex-col gap-1">
-            <div className="flex items-baseline gap-2">
-              <p className="text-foreground text-sm font-medium">
-                {comment.user.name}
-              </p>
-              <time
-                dateTime={comment.createdAt.toISOString()}
-                className="text-foreground-muted text-xs"
-              >
-                {formatDate(comment.createdAt)}
-              </time>
-            </div>
-            <p className="text-foreground-secondary text-sm">
-              {comment.content}
-            </p>
-          </div>
-        </li>
+        <CommentItem
+          key={comment.id}
+          comment={comment}
+          articlePath={articlePath}
+          currentUserId={currentUserId}
+        />
       ))}
     </ul>
   );

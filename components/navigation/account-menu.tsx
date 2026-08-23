@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { LogoutButton } from "@/components/auth/logout-button";
+import { AuthorRequestDialog } from "@/components/navigation/author-request-dialog";
 import type { PublicNavUser } from "@/types/navigation";
 
 export function AccountMenu({
@@ -41,6 +42,12 @@ export function AccountMenu({
           </span>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
+        <DropdownMenuItem asChild>
+          <Link href="/bookmarks">Bookmarks</Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link href="/notifications">Notifications</Link>
+        </DropdownMenuItem>
         {canAuthor ? (
           <DropdownMenuItem asChild>
             <Link href="/author">Author dashboard</Link>
@@ -51,6 +58,7 @@ export function AccountMenu({
             <Link href="/admin">Admin dashboard</Link>
           </DropdownMenuItem>
         ) : null}
+        {!canAuthor && user.role === "READER" ? <AuthorRequestDialog /> : null}
         <DropdownMenuSeparator />
         <DropdownMenuItem
           onSelect={(event) => event.preventDefault()}

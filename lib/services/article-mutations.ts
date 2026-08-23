@@ -8,6 +8,10 @@ import { prisma } from "@/lib/db/prisma";
 import { isManagerRole, requirePermission } from "@/lib/permissions/check";
 import type { SessionUser } from "@/lib/auth/session";
 import {
+  createNotification,
+  notifyUsersWithPermission,
+} from "@/lib/services/notifications";
+import {
   draftSaveSchema,
   publishSettingsSchema,
   type DraftSaveInput,
@@ -58,7 +62,7 @@ async function requireOwnedArticle(articleId: string, user: SessionUser) {
   const isManager = isManagerRole(user);
   return prisma.article.findFirst({
     where: isManager ? { id: articleId } : { id: articleId, authorId: user.id },
-    select: { id: true, slug: true, status: true },
+    select: { id: true, slug: true, status: true, authorId: true, title: true },
   });
 }
 
@@ -179,6 +183,14 @@ export async function submitForReviewAction(
     where: { id: articleId },
     data: { status: "IN_REVIEW" },
   });
+
+  await notifyUsersWithPermission("article:review", {
+    type: "article_submitted",
+    title: "Article submitted for review",
+    message: `"${article.title}" is ready for your review.`,
+    metadata: { articleId },
+  });
+
   revalidatePath("/author/articles");
   return {};
 }
@@ -242,6 +254,16 @@ export async function publishArticleAction(
         ]
       : []),
   ]);
+
+  if (!isScheduled && owned.authorId !== user.id) {
+    await createNotification({
+      userId: owned.authorId,
+      type: "article_published",
+      title: "Article published",
+      message: `"${owned.title}" is now live.`,
+      metadata: { articleId },
+    });
+  }
 
   revalidatePath("/author/articles");
   revalidatePath(`/article/${owned.slug}`);
