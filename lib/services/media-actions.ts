@@ -6,10 +6,13 @@ import { mkdir, unlink, writeFile } from "node:fs/promises";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db/prisma";
 import { requireUser } from "@/lib/permissions/check";
+import { checkRateLimit } from "@/lib/utils/rate-limit";
 import {
   ALLOWED_IMAGE_MIME_TYPES,
   MAX_UPLOAD_SIZE_BYTES,
+  extensionForMimeType,
   isAllowedImageMimeType,
+  sniffImageMimeType,
 } from "@/lib/validation/media";
 
 export interface MediaActionState {
@@ -24,7 +27,10 @@ export interface MediaActionState {
 const UPLOAD_DIR = path.join(process.cwd(), "public", "uploads");
 
 function sanitizeFilename(name: string): string {
-  return name.replace(/[^a-zA-Z0-9.-]/g, "-").slice(-100);
+  const withoutExtension = name.replace(/\.[^.]*$/, "");
+  return (
+    withoutExtension.replace(/[^a-zA-Z0-9-]/g, "-").slice(-100) || "upload"
+  );
 }
 
 export async function uploadMediaAction(
@@ -32,6 +38,10 @@ export async function uploadMediaAction(
   formData: FormData,
 ): Promise<MediaActionState> {
   const user = await requireUser();
+
+  if (!checkRateLimit(`media-upload:${user.id}`, 20, 60_000)) {
+    return { error: "Too many uploads. Please try again in a minute." };
+  }
 
   const file = formData.get("file");
   if (!(file instanceof File) || file.size === 0) {
@@ -48,18 +58,27 @@ export async function uploadMediaAction(
     };
   }
 
+  const buffer = Buffer.from(await file.arrayBuffer());
+
+  // The browser-supplied `file.type` is just a client-side guess — verify
+  // the actual bytes match a real image before writing anything to disk.
+  const sniffedType = sniffImageMimeType(buffer);
+  if (!sniffedType || !isAllowedImageMimeType(sniffedType)) {
+    return { error: "That file doesn't look like a valid image." };
+  }
+
+  const extension = extensionForMimeType(sniffedType) ?? "bin";
   await mkdir(UPLOAD_DIR, { recursive: true });
 
   const safeName = sanitizeFilename(file.name || "upload");
-  const storedFilename = `${randomUUID()}-${safeName}`;
-  const buffer = Buffer.from(await file.arrayBuffer());
+  const storedFilename = `${randomUUID()}-${safeName}.${extension}`;
   await writeFile(path.join(UPLOAD_DIR, storedFilename), buffer);
 
   await prisma.media.create({
     data: {
       url: `/uploads/${storedFilename}`,
       filename: file.name || storedFilename,
-      mimeType: file.type,
+      mimeType: sniffedType,
       size: file.size,
       uploadedBy: user.id,
     },

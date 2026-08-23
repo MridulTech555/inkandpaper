@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { randomUUID } from "node:crypto";
 import { prisma } from "@/lib/db/prisma";
 import { requirePermission, requireUser } from "@/lib/permissions/check";
+import { checkRateLimit } from "@/lib/utils/rate-limit";
 import { logAudit } from "@/lib/services/audit-log";
 import {
   createNotification,
@@ -18,6 +19,10 @@ export async function createAuthorRequestAction(
   message: string,
 ): Promise<AuthorRequestActionResult> {
   const user = await requireUser();
+
+  if (!checkRateLimit(`author-request:${user.id}`, 3, 60_000)) {
+    return { error: "Too many attempts. Please try again later." };
+  }
 
   if (user.role.name !== "READER") {
     return { error: "Only readers can request author access." };

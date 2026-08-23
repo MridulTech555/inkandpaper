@@ -17,8 +17,21 @@ export interface SessionUser {
   permissions: string[];
 }
 
+// AUTH_SECRET is mixed into every session token hash (HMAC, not a plain
+// digest) so that even a leaked database dump can't be used to derive or
+// forge valid session tokens without also having this server-only secret.
+// Required in production; falls back to a fixed dev-only value so local
+// setup doesn't need a .env before `npm run dev` works.
+const authSecret =
+  process.env.AUTH_SECRET ??
+  (process.env.NODE_ENV === "production"
+    ? (() => {
+        throw new Error("AUTH_SECRET must be set in production.");
+      })()
+    : "dev-only-insecure-secret-do-not-use-in-production");
+
 function hashToken(token: string): string {
-  return crypto.createHash("sha256").update(token).digest("hex");
+  return crypto.createHmac("sha256", authSecret).update(token).digest("hex");
 }
 
 export async function createSession(userId: string): Promise<void> {

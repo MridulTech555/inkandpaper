@@ -201,6 +201,11 @@ model Article {
   @@index([authorId])
   @@index([categoryId])
   @@index([publishedAt])
+  // Covers the published-articles-by-date listing (home, category, search)
+  // and the author dashboard's per-status article list in one index each,
+  // instead of Postgres bitmap-combining two single-column indexes.
+  @@index([status, publishedAt])
+  @@index([authorId, status])
 }
 
 model ArticleView {
@@ -303,6 +308,7 @@ model Comment {
   @@index([articleId])
   @@index([userId])
   @@index([status])
+  @@index([articleId, status])
 }
 
 model Bookmark {
@@ -353,6 +359,7 @@ model Notification {
 
   @@index([userId])
   @@index([isRead])
+  @@index([userId, isRead])
 }
 
 // ---------------------------------------------------------------------------

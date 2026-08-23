@@ -44,6 +44,13 @@ export async function unsubscribeFromNewsletterAction(
 ): Promise<NewsletterActionState> {
   const email = formData.get("email");
 
+  if (
+    typeof email === "string" &&
+    !checkRateLimit(`newsletter-unsubscribe:${email}`, 5, 60_000)
+  ) {
+    return { error: "Too many attempts. Please try again later." };
+  }
+
   const parsed = newsletterSubscribeSchema.safeParse({ email });
   if (!parsed.success) {
     return {

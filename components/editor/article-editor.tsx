@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Eye, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -12,10 +13,18 @@ import { ArticleStatusBadge } from "@/components/author/article-status-badge";
 import { AddBlockMenu } from "@/components/editor/add-block-menu";
 import { BlockItem, type EditorBlock } from "@/components/editor/block-item";
 import { SaveStatus, type SaveState } from "@/components/editor/save-status";
-import {
-  PublishDialog,
-  type PublishInitialValues,
-} from "@/components/editor/publish-dialog";
+import type { PublishInitialValues } from "@/components/editor/publish-dialog";
+
+// The publish dialog pulls in the media picker, tag checkboxes, and the SEO
+// fields — meaningful weight that only matters once someone actually clicks
+// Publish. Loading it on demand keeps the initial editor bundle smaller.
+const PublishDialog = dynamic(
+  () =>
+    import("@/components/editor/publish-dialog").then(
+      (mod) => mod.PublishDialog,
+    ),
+  { ssr: false },
+);
 import {
   saveArticleContentAction,
   submitForReviewAction,

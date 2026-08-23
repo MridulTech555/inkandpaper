@@ -9,11 +9,17 @@ export interface CommentActionResult {
   error?: string;
 }
 
+const VALID_STATUSES = ["VISIBLE", "HIDDEN", "REPORTED"] as const;
+
 export async function setCommentStatusAction(
   commentId: string,
   status: "VISIBLE" | "HIDDEN" | "REPORTED",
 ): Promise<CommentActionResult> {
   const admin = await requirePermission("comment:moderate");
+
+  if (!VALID_STATUSES.includes(status)) {
+    return { error: "Invalid status." };
+  }
 
   await prisma.comment.update({ where: { id: commentId }, data: { status } });
 

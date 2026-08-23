@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db/prisma";
 import { requireUser } from "@/lib/permissions/check";
+import { checkRateLimit } from "@/lib/utils/rate-limit";
 import { commentContentSchema } from "@/lib/validation/comment";
 import { notifyUsersWithPermission } from "@/lib/services/notifications";
 
@@ -16,6 +17,10 @@ export async function createCommentAction(
   content: string,
 ): Promise<CommentActionResult> {
   const user = await requireUser();
+
+  if (!checkRateLimit(`comment-create:${user.id}`, 10, 60_000)) {
+    return { error: "You're commenting too fast. Please slow down." };
+  }
 
   const parsed = commentContentSchema.safeParse(content);
   if (!parsed.success) {
@@ -90,6 +95,10 @@ export async function reportCommentAction(
   articlePath: string,
 ): Promise<CommentActionResult> {
   const user = await requireUser();
+
+  if (!checkRateLimit(`comment-report:${user.id}`, 10, 60_000)) {
+    return { error: "Too many reports. Please try again later." };
+  }
 
   const comment = await prisma.comment.findFirst({
     where: { id: commentId, status: "VISIBLE" },

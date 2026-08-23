@@ -1,5 +1,5 @@
 import { LoadingSpinner } from "@/components/shared/loading-spinner";
 
 export default function AuthorLoading() {
-  return <LoadingSpinner label="Checking session…" />;
+  return <LoadingSpinner label="Loading…" />;
 }

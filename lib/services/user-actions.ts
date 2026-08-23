@@ -9,6 +9,8 @@ export interface UserActionResult {
   error?: string;
 }
 
+const VALID_STATUSES = ["ACTIVE", "INACTIVE", "SUSPENDED"] as const;
+
 export async function changeUserRoleAction(
   userId: string,
   roleId: string,
@@ -45,6 +47,10 @@ export async function setUserStatusAction(
   status: "ACTIVE" | "INACTIVE" | "SUSPENDED",
 ): Promise<UserActionResult> {
   const admin = await requirePermission("user:update");
+
+  if (!VALID_STATUSES.includes(status)) {
+    return { error: "Invalid status." };
+  }
 
   if (userId === admin.id) {
     return { error: "You can't change your own status." };
