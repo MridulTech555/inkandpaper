@@ -7,9 +7,17 @@ import type { NextConfig } from "next";
 // through middleware — a bigger change than belongs in a hardening pass.
 // Everything else here is a real restriction: no framing, no plugins, no
 // cross-origin fetches, no unexpected image/font hosts.
+// `next dev` compiles with eval-based source maps and React's dev build calls
+// eval() for debugging features, so 'unsafe-eval' is required in development.
+// It is never added to the production CSP.
+const scriptSrc =
+  process.env.NODE_ENV === "development"
+    ? "script-src 'self' 'unsafe-inline' 'unsafe-eval'"
+    : "script-src 'self' 'unsafe-inline'";
+
 const CONTENT_SECURITY_POLICY = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline'",
+  scriptSrc,
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: https:",
   "font-src 'self' data:",

@@ -13,6 +13,9 @@ import { EmptyState } from "@/components/ui/empty-state";
 export const metadata: Metadata = {
   title: "Search",
   description: "Search articles by keyword, category, or author.",
+  // Parametrized results pages carry no standalone SEO value and waste
+  // crawl budget — let crawlers follow through to articles but not index.
+  robots: { index: false, follow: true },
 };
 
 const PAGE_SIZE = 9;

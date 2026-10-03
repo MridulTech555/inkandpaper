@@ -1,6 +1,6 @@
 import Link from "next/link";
-import Image from "next/image";
 import { cn } from "@/lib/utils/cn";
+import { ImageWithFallback } from "@/components/ui/image-with-fallback";
 import { Badge } from "@/components/ui/badge";
 import { Avatar } from "@/components/ui/avatar";
 import type { ArticleCardData } from "@/lib/services/articles";
@@ -73,7 +73,7 @@ export function ArticleCard({
       >
         <div className="bg-surface relative aspect-[16/10] overflow-hidden md:aspect-auto">
           {article.featuredImage ? (
-            <Image
+            <ImageWithFallback
               src={article.featuredImage}
               unoptimized
               alt=""
@@ -113,7 +113,7 @@ export function ArticleCard({
       >
         <div className="bg-surface relative h-24 w-32 shrink-0 overflow-hidden rounded-md sm:h-28 sm:w-40">
           {article.featuredImage ? (
-            <Image
+            <ImageWithFallback
               src={article.featuredImage}
               unoptimized
               alt=""
@@ -166,7 +166,7 @@ export function ArticleCard({
     >
       <div className="bg-surface relative aspect-[16/9] overflow-hidden">
         {article.featuredImage ? (
-          <Image
+          <ImageWithFallback
             src={article.featuredImage}
             unoptimized
             alt=""

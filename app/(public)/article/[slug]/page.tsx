@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Image from "next/image";
+import { ImageWithFallback } from "@/components/ui/image-with-fallback";
 import { notFound } from "next/navigation";
 import { after } from "next/server";
 import {
@@ -154,7 +154,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
     description: article.excerpt ?? undefined,
     image: article.featuredImage ?? undefined,
     datePublished: article.publishedAt?.toISOString(),
-    dateModified: article.publishedAt?.toISOString(),
+    dateModified: article.updatedAt.toISOString(),
     mainEntityOfPage: `${siteConfig.url}${articlePath}`,
     author: authorForBio.slug
       ? {
@@ -170,9 +170,32 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
     },
   };
 
+  const breadcrumbJsonLd: Record<string, unknown> = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { name: "Home", url: siteConfig.url },
+      ...(article.category
+        ? [
+            {
+              name: article.category.name,
+              url: `${siteConfig.url}/category/${article.category.slug}`,
+            },
+          ]
+        : []),
+      { name: article.title, url: `${siteConfig.url}${articlePath}` },
+    ].map((item, index) => ({
+      "@type": "ListItem",
+      position: index + 1,
+      name: item.name,
+      item: item.url,
+    })),
+  };
+
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-4 py-8 sm:px-6">
       <JsonLd data={articleJsonLd} />
+      <JsonLd data={breadcrumbJsonLd} />
       {authorForBio.slug ? (
         <JsonLd
           data={{
@@ -244,9 +267,9 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
 
       {article.featuredImage ? (
         <div className="bg-surface relative aspect-[16/9] w-full overflow-hidden rounded-lg">
-          <Image
+          <ImageWithFallback
             src={article.featuredImage}
-            alt=""
+            alt={article.title}
             fill
             priority
             unoptimized

@@ -18,11 +18,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   return [
     { url: siteConfig.url, changeFrequency: "daily", priority: 1 },
-    {
-      url: `${siteConfig.url}/search`,
-      changeFrequency: "weekly",
-      priority: 0.5,
-    },
     ...articles.map((article) => ({
       url: `${siteConfig.url}/article/${article.slug}`,
       lastModified: article.updatedAt,

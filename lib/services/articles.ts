@@ -76,6 +76,7 @@ export async function getArticleBySlug(slug: string) {
       excerpt: true,
       featuredImage: true,
       publishedAt: true,
+      updatedAt: true,
       seo: true,
       category: { select: { id: true, name: true, slug: true } },
       author: {
@@ -110,6 +111,75 @@ export async function getArticleBySlug(slug: string) {
       _count: { select: { likes: true } },
     },
   });
+}
+
+/** Re-fetches published articles by id, preserving the order of `ids`. */
+async function orderedPublishedArticles(ids: string[]) {
+  if (ids.length === 0) return [];
+
+  const articles = await prisma.article.findMany({
+    where: { id: { in: ids }, status: "PUBLISHED" },
+    select: articleCardSelect,
+  });
+  const byId = new Map(articles.map((article) => [article.id, article]));
+
+  return ids
+    .map((id) => byId.get(id))
+    .filter((article): article is (typeof articles)[number] => Boolean(article));
+}
+
+/**
+ * Most-viewed published articles over the last `days`. Returns `[]` when there
+ * is no traffic in the window, so the caller can hide the section entirely
+ * rather than pad it with unrelated content.
+ */
+export async function getTrendingArticles({
+  days = 7,
+  take = 3,
+  excludeIds = [],
+}: { days?: number; take?: number; excludeIds?: string[] } = {}) {
+  const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+  const grouped = await prisma.articleView.groupBy({
+    by: ["articleId"],
+    where: {
+      createdAt: { gte: since },
+      article: { status: "PUBLISHED" },
+      ...(excludeIds.length ? { articleId: { notIn: excludeIds } } : {}),
+    },
+    _count: { articleId: true },
+    orderBy: { _count: { articleId: "desc" } },
+    take,
+  });
+
+  return orderedPublishedArticles(grouped.map((row) => row.articleId));
+}
+
+/**
+ * Published articles with the most reader comments over the last `days`.
+ * Returns `[]` when nothing has been discussed in the window.
+ */
+export async function getMostDiscussedArticles({
+  days = 30,
+  take = 5,
+  excludeIds = [],
+}: { days?: number; take?: number; excludeIds?: string[] } = {}) {
+  const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+  const grouped = await prisma.comment.groupBy({
+    by: ["articleId"],
+    where: {
+      createdAt: { gte: since },
+      status: { in: ["VISIBLE", "REPORTED"] },
+      article: { status: "PUBLISHED" },
+      ...(excludeIds.length ? { articleId: { notIn: excludeIds } } : {}),
+    },
+    _count: { articleId: true },
+    orderBy: { _count: { articleId: "desc" } },
+    take,
+  });
+
+  return orderedPublishedArticles(grouped.map((row) => row.articleId));
 }
 
 export async function getRelatedArticles(

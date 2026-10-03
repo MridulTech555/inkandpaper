@@ -8,12 +8,6 @@ import {
 } from "@/lib/services/notifications";
 import { Button } from "@/components/ui/button";
 import { SimpleTooltip } from "@/components/ui/tooltip";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { AccountMenu } from "@/components/navigation/account-menu";
 import { MobileNavigation } from "@/components/navigation/mobile-navigation";
 import { NotificationBell } from "@/components/shared/notification-bell";
@@ -45,32 +39,31 @@ export async function PublicHeader() {
 
   return (
     <header className="border-border bg-background/95 sticky top-0 z-40 border-b backdrop-blur">
-      <div className="mx-auto flex h-16 max-w-5xl items-center justify-between gap-4 px-4 sm:px-6">
-        <Link
-          href="/"
-          className="text-foreground font-serif text-lg font-semibold"
-        >
-          Ink &amp; Paper
-        </Link>
+      <div className="mx-auto flex h-16 max-w-5xl items-center gap-4 px-4 sm:px-6">
+        <div className="flex items-center gap-5">
+          <Link
+            href="/"
+            className="text-foreground font-serif text-lg font-semibold"
+          >
+            Ink &amp; Paper
+          </Link>
 
-        <nav className="hidden items-center gap-1 md:flex">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm">
-                Categories
+          <nav className="hidden items-center gap-1 md:flex">
+            {CATEGORY_LINKS.map((category) => (
+              <Button
+                key={category.href}
+                asChild
+                variant="ghost"
+                size="sm"
+                className="text-foreground-secondary hover:text-foreground"
+              >
+                <Link href={category.href}>{category.label}</Link>
               </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start">
-              {CATEGORY_LINKS.map((category) => (
-                <DropdownMenuItem key={category.href} asChild>
-                  <Link href={category.href}>{category.label}</Link>
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </nav>
+            ))}
+          </nav>
+        </div>
 
-        <div className="flex items-center gap-1">
+        <div className="ml-auto flex items-center gap-1">
           <SimpleTooltip label="Search">
             <Button asChild variant="ghost" size="icon">
               <Link href="/search" aria-label="Search">

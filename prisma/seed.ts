@@ -132,7 +132,7 @@ async function main() {
 
   const authorProfileData = {
     bio: "Writes about technology, culture, and everything in between. Formerly an engineer, now mostly found with a notebook and too many browser tabs open.",
-    avatarUrl: "https://picsum.photos/seed/ada-author-avatar/256/256",
+    avatarUrl: "/seed/avatar.svg",
     socialLinks: {
       twitter: "https://twitter.com/adaauthor",
       website: "https://adaauthor.dev",
@@ -322,7 +322,7 @@ async function main() {
     const articleScalarData = {
       title: article.title,
       excerpt: article.excerpt,
-      featuredImage: `https://picsum.photos/seed/${article.slug}/1600/900`,
+      featuredImage: `/seed/featured-${(article.slug.length % 3) + 1}.svg`,
       status: "PUBLISHED" as const,
       authorId: authorUser.id,
       categoryId: article.category.id,

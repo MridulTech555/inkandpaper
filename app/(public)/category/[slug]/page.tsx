@@ -19,19 +19,26 @@ interface CategoryPageProps {
 
 export async function generateMetadata({
   params,
+  searchParams,
 }: CategoryPageProps): Promise<Metadata> {
   const { slug } = await params;
+  const { page: pageParam } = await searchParams;
   const category = await getCategoryBySlug(slug);
   if (!category) return {};
 
+  const page = Math.max(1, Number(pageParam) || 1);
+  const basePath = `/category/${category.slug}`;
+  const path = page > 1 ? `${basePath}?page=${page}` : basePath;
+  const url = `${siteConfig.url}${path}`;
+
   return {
-    title: category.name,
+    title: page > 1 ? `${category.name} — Page ${page}` : category.name,
     description: category.description ?? `Articles in ${category.name}`,
-    alternates: { canonical: `${siteConfig.url}/category/${category.slug}` },
+    alternates: { canonical: url },
     openGraph: {
       title: category.name,
       description: category.description ?? undefined,
-      url: `${siteConfig.url}/category/${category.slug}`,
+      url,
     },
   };
 }

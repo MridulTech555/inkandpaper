@@ -19,19 +19,26 @@ interface AuthorPageProps {
 
 export async function generateMetadata({
   params,
+  searchParams,
 }: AuthorPageProps): Promise<Metadata> {
   const { slug } = await params;
+  const { page: pageParam } = await searchParams;
   const profile = await getAuthorProfileBySlug(slug);
   if (!profile) return {};
 
+  const page = Math.max(1, Number(pageParam) || 1);
+  const basePath = `/author/${profile.slug}`;
+  const path = page > 1 ? `${basePath}?page=${page}` : basePath;
+  const url = `${siteConfig.url}${path}`;
+
   return {
-    title: profile.user.name,
+    title: page > 1 ? `${profile.user.name} — Page ${page}` : profile.user.name,
     description: profile.bio ?? `Articles by ${profile.user.name}`,
-    alternates: { canonical: `${siteConfig.url}/author/${profile.slug}` },
+    alternates: { canonical: url },
     openGraph: {
       title: profile.user.name,
       description: profile.bio ?? undefined,
-      url: `${siteConfig.url}/author/${profile.slug}`,
+      url,
     },
   };
 }

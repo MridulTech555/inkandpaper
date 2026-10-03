@@ -6,7 +6,22 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: "*",
       allow: "/",
-      disallow: ["/admin", "/author", "/auth", "/api", "/unauthorized"],
+      // Note: public author profiles live at /author/[slug] and must stay
+      // crawlable — only the author dashboard sub-routes are disallowed.
+      disallow: [
+        "/admin",
+        "/auth",
+        "/api",
+        "/unauthorized",
+        "/account",
+        "/bookmarks",
+        "/notifications",
+        "/author/articles",
+        "/author/profile",
+        "/author/analytics",
+        "/author/media",
+        "/newsletter/unsubscribe",
+      ],
     },
     sitemap: `${siteConfig.url}/sitemap.xml`,
   };
