@@ -18,6 +18,9 @@
     "db:studio": "prisma studio",
     "db:seed": "prisma db seed"
   },
+  "engines": {
+    "node": ">=18"
+  },  
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",
     "@prisma/client": "^6.19.3",
